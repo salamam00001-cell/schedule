@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>جدول العمل الأسبوعي</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1a3a5c;
+    --primary-light: #2563a8;
+    --accent: #0ea5e9;
+    --surface: #f8fafc;
+    --surface2: #eef2f7;
+    --border: #cbd5e1;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --morning: #0284c7;
+    --evening: #7c3aed;
+    --night: #1e3a5f;
+    --off-weekly: #16a34a;
+    --off-annual: #0891b2;
+    --off-sick: #dc2626;
+    --off-official: #d97706;
+    --off-absent: #374151;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: linear-gradient(135deg, #0f2942 0%, #1a3a5c 50%, #0f2942 100%);
+    min-height: 100vh;
+    color: var(--text);
+    direction: rtl;
+  }
+
+  header {
+    background: rgba(255,255,255,0.07);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 68px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    overflow: hidden;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .logo svg { width: 36px; height: 36px; }
+
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #0284c7; transform: translateY(-1px); }
+
+  .btn-outline {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+  .btn-outline:hover { background: rgba(255,255,255,0.18); }
+
+  .btn-danger { background: #dc2626; color: #fff; }
+  .btn-danger:hover { background: #b91c1c; }
+
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-success:hover { background: #15803d; }
+
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+  main { padding: 2rem; max-width: 1600px; margin: 0 auto; }
+
+  .config-panel {
+    background: rgba(255,255,255,0.95);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+
+  .config-panel h2 {
+    font-size: 16px;
+    color: var(--primary);
+    margin-bottom: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .config-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .form-group input, .form-group select {
+    padding: 9px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-group input:focus, .form-group select:focus {
+    border-color: var(--accent);
+  }
+
+  .url-group { flex: 3; }
+
+  .connection-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .connected { background: #dcfce7; color: #16a34a; }
+  .disconnected { background: #fee2e2; color: #dc2626; }
+  .connecting { background: #fef3c7; color: #d97706; }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .week-label {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    min-width: 260px;
+    text-align: center;
+  }
+
+  .schedule-card {
+    background: rgba(255,255,255,0.97);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    margin-bottom: 1.5rem;
+  }
+
+  .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+  }
+
+  .schedule-table th {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .schedule-table th.name-col {
+    text-align: right;
+    padding-right: 20px;
+    min-width: 180px;
+  }
+
+  .day-header { min-width: 110px; }
+
+  .day-date {
+    display: block;
+    font-size: 11px;
+    opacity: 0.75;
+    font-weight: 400;
+    margin-top: 2px;
+  }
+
+  .schedule-table tr:nth-child(even) td { background: var(--surface); }
+  .schedule-table tr:hover td { background: #e0f0ff; }
+
+  .schedule-table td {
+    padding: 6px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: center;
+    transition: background 0.15s;
+  }
+
+  .schedule-table td.name-cell {
+    text-align: right;
+    padding: 10px 20px 10px 10px;
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 15px;
+    background: #fff !important;
+    border-left: 3px solid var(--accent);
+  }
+
+  .schedule-table td.stats-cell {
+    background: #f1f5f9 !important;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    white-space: nowrap;
+  }
+
+  .day-cell {
+    cursor: pointer;
+    min-height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 2px;
+    transition: all 0.15s;
+    border: 2px solid transparent;
+    padding: 6px;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .day-cell:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  .day-cell.empty { background: #f8fafc; border: 2px dashed #e2e8f0; }
+
+  .day-cell.morning {
+    background: #dbeafe;
+    border-color: var(--morning);
+    color: var(--morning);
+  }
+  .day-cell.evening {
+    background: #ede9fe;
+    border-color: var(--evening);
+    color: var(--evening);
+  }
+  .day-cell.night {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+    color: #93c5fd;
+  }
+  .day-cell.weekly-off {
+    background: #dcfce7;
+    border-color: var(--off-weekly);
+    color: var(--off-weekly);
+  }
+  .day-cell.annual-leave {
+    background: #cffafe;
+    border-color: var(--off-annual);
+    color: var(--off-annual);
+  }
+  .day-cell.sick-leave {
+    background: #fee2e2;
+    border-color: var(--off-sick);
+    color: var(--off-sick);
+  }
+  .day-cell.official-holiday {
+    background: #fef3c7;
+    border-color: var(--off-official);
+    color: var(--off-official);
+  }
+  .day-cell.absent {
+    background: #f1f5f9;
+    border-color: var(--off-absent);
+    color: var(--off-absent);
+  }
+
+  .cell-icon { font-size: 18px; }
+  .cell-label { font-size: 10px; font-weight: 700; }
+  .cell-name { font-size: 9px; font-weight: 600; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+
+  .stats-grid {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .stat-morning { background: #dbeafe; color: var(--morning); }
+  .stat-evening { background: #ede9fe; color: var(--evening); }
+  .stat-night { background: #1e3a5f; color: #93c5fd; }
+  .stat-off { background: #dcfce7; color: var(--off-weekly); }
+
+  .table-scroll { overflow-x: auto; }
+
+  .legend {
+    background: rgba(255,255,255,0.95);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+
+  .legend-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-left: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .legend-dot {
+    width: 20px; height: 20px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .add-employee-section {
+    background: rgba(255,255,255,0.95);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+
+  .status-bar {
+    background: rgba(0,0,0,0.25);
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: rgba(255,255,255,0.8);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+  }
+  .spinner.active { display: inline-block; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem;
+    min-width: 0;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    transform: scale(0.9);
+    transition: transform 0.2s;
+    box-sizing: border-box;
+  }
+
+  .modal-overlay.open .modal { transform: scale(1); }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 6px;
+  }
+
+  .modal-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .shift-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+
+  .shift-btn {
+    padding: 12px 10px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    font-family: 'Cairo', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s;
+  }
+
+  .shift-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  .shift-btn .sicon { font-size: 24px; }
+
+  .sb-morning { background: #dbeafe; border-color: var(--morning); color: var(--morning); }
+  .sb-evening { background: #ede9fe; border-color: var(--evening); color: var(--evening); }
+  .sb-night { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+  .sb-weekly { background: #dcfce7; border-color: var(--off-weekly); color: var(--off-weekly); }
+  .sb-annual { background: #cffafe; border-color: var(--off-annual); color: var(--off-annual); }
+  .sb-sick { background: #fee2e2; border-color: var(--off-sick); color: var(--off-sick); }
+  .sb-official { background: #fef3c7; border-color: var(--off-official); color: var(--off-official); }
+  .sb-absent { background: #f1f5f9; border-color: var(--off-absent); color: var(--off-absent); }
+  .sb-clear { background: #f8fafc; border-color: #cbd5e1; color: #64748b; }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.2rem;
+  }
+
+  /* Employee log */
+  .log-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 8px;
+    padding: 2px 9px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--primary-light);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Cairo', sans-serif;
+    vertical-align: middle;
+    transition: background 0.15s;
+  }
+  .log-btn:hover { background: var(--surface2); }
+
+  .log-modal {
+    max-width: 480px;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .log-summary {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .log-list {
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 1rem;
+    padding-left: 4px;
+  }
+
+  .log-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--surface);
+    border-right: 4px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .log-item:hover { background: var(--surface2); }
+
+  .log-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2rem 0;
+    font-size: 14px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #1e293b;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Cairo', sans-serif;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    transition: transform 0.3s;
+    z-index: 2000;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: #16a34a; }
+  .toast.error { background: #dc2626; }
+  .toast.info { background: #0284c7; }
+
+  /* ── Print Styles ───────────────────────────────────── */
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    body {
+      background: #fff !important;
+      color: #000 !important;
+    }
+
+    header, .status-bar, .config-panel, .add-employee-section,
+    .week-nav .btn, .legend, .modal-overlay {
+      display: none !important;
+    }
+
+    .week-nav {
+      margin-bottom: 8px;
+    }
+
+    .week-label {
+      color: #1a3a5c !important;
+      font-size: 16px !important;
+      display: block;
+      text-align: center;
+    }
+
+    main {
+      padding: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .schedule-card {
+      box-shadow: none !important;
+      border: 1px solid #ccc !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+    }
+
+    .table-scroll {
+      overflow: visible !important;
+    }
+
+    .schedule-table {
+      min-width: 0 !important;
+      width: 100% !important;
+      font-size: 11px !important;
+    }
+
+    .schedule-table th {
+      background: #1a3a5c !important;
+      color: #fff !important;
+      padding: 6px 4px !important;
+      font-size: 11px !important;
+    }
+
+    .schedule-table td {
+      padding: 3px !important;
+    }
+
+    .schedule-table td.name-cell {
+      font-size: 12px !important;
+      padding: 6px 10px !important;
+    }
+
+    .day-cell {
+      margin: 1px !important;
+      padding: 3px !important;
+      border-radius: 4px !important;
+      min-height: 34px !important;
+      page-break-inside: avoid;
+    }
+
+    .cell-icon { font-size: 13px !important; }
+    .cell-label { font-size: 8px !important; }
+    .cell-name { font-size: 7px !important; }
+
+    /* Print page header */
+    .print-header {
+      display: block !important;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a3a5c;
+      margin-bottom: 6px;
+    }
+
+    @page {
+      size: A4 landscape;
+      margin: 10mm;
+    }
+  }
+
+  .print-header { display: none; }
+
+  @media (max-width: 768px) {
+    main { padding: 1rem; }
+    header { padding: 0 0.75rem; height: auto; min-height: 56px; flex-wrap: wrap; gap: 6px; padding-top: 8px; padding-bottom: 8px; }
+    .week-label { font-size: 15px; min-width: 180px; }
+    .logo span { display: none; }
+    .logo svg { width: 28px; height: 28px; }
+    .header-actions { gap: 6px; flex-wrap: wrap; }
+    .header-actions .btn { padding: 6px 10px; font-size: 12px; gap: 4px; }
+    .header-actions .btn svg { width: 14px; height: 14px; }
+    .connection-badge { font-size: 11px; padding: 4px 8px; }
+
+    /* Modals: fit narrower screens without overflow */
+    .modal-overlay { padding: 0.75rem; }
+    .modal { width: 100%; padding: 1rem; max-height: 90vh; overflow-y: auto; }
+    .modal-title { font-size: 15px; margin-bottom: 4px; }
+    .modal-sub { font-size: 12px; margin-bottom: 0.8rem; }
+    .shift-options { grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 0.6rem; }
+    .shift-btn { padding: 7px 6px; font-size: 11px; gap: 3px; border-radius: 8px; }
+    .shift-btn .sicon { font-size: 16px; }
+    .modal-footer { margin-top: 0.6rem; }
+
+    /* Stack settings/employee forms vertically on small screens */
+    .config-row,
+    .add-employee-section { flex-direction: column; align-items: stretch; }
+    .add-employee-section .form-group,
+    .add-employee-section > button,
+    .config-row .form-group,
+    .config-row > button {
+      width: 100%;
+      min-width: 0 !important;
+      max-width: none !important;
+    }
+    .add-employee-section #deleteBtn { margin-right: 0 !important; }
+
+    /* Week navigation */
+    .week-nav { gap: 0.5rem; }
+    .week-nav .btn { padding: 8px 12px; font-size: 13px; }
+
+    /* Leave-log button */
+    .legend { justify-content: center; }
+    .legend .btn { width: 100%; justify-content: center; }
+
+    /* Smooth touch scrolling for the schedule table */
+    .table-scroll { -webkit-overflow-scrolling: touch; }
+  }
+
+  @media (max-width: 480px) {
+    .schedule-table { min-width: 700px; }
+    .day-header { min-width: 80px; }
+    .schedule-table th.name-col { min-width: 120px; }
+    .schedule-table th { font-size: 11px; padding: 8px 4px; }
+    .schedule-table td.name-cell { font-size: 12px; padding: 6px 10px 6px 6px; }
+    .cell-icon { font-size: 11px; }
+    .cell-label { font-size: 7px; }
+    .cell-name { font-size: 7px; max-width: 60px; }
+    .day-cell { padding: 3px; margin: 1px; }
+    .connection-badge { font-size: 11px; padding: 4px 10px; }
+    .week-label { font-size: 13px; min-width: 140px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="36" height="36" rx="10" fill="rgba(255,255,255,0.15)"/>
+      <rect x="6" y="9" width="24" height="2.5" rx="1.25" fill="#fff"/>
+      <rect x="6" y="15" width="18" height="2.5" rx="1.25" fill="#7dd3fc"/>
+      <rect x="6" y="21" width="20" height="2.5" rx="1.25" fill="#a5b4fc"/>
+      <rect x="6" y="27" width="14" height="2.5" rx="1.25" fill="#93c5fd"/>
+    </svg>
+    <span>جدول العمل الأسبوعي</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-outline" onclick="printSchedule()" title="طباعة الجدول">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      طباعة
+    </button>
+    <button class="btn btn-outline" onclick="exportImage()" title="تصدير صورة JPG">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      صورة
+    </button>
+    <button class="btn btn-outline" onclick="exportPDF()" title="تصدير PDF">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h1a2 2 0 0 1 0 4H9v-4z"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
+      PDF
+    </button>
+    <span id="connectionBadge" class="connection-badge disconnected">
+      <span class="dot"></span> غير متصل
+    </span>
+  </div>
+</header>
+
+<main>
+  <!-- Status -->
+  <div class="status-bar" id="statusBar">
+    <div class="spinner" id="spinner"></div>
+    <span id="statusText">جاهز — أضف موظفين وابدأ الجدولة</span>
+  </div>
+
+  <!-- Add Employee -->
+  <div class="add-employee-section">
+    <div class="form-group" style="min-width:220px;">
+      <label>اسم الموظف</label>
+      <input type="text" id="newEmployeeName" placeholder="أدخل الاسم" onkeydown="if(event.key==='Enter') addEmployee()" />
+    </div>
+    <button class="btn btn-success" onclick="addEmployee()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      إضافة موظف
+    </button>
+    <button class="btn btn-danger" onclick="confirmDeleteEmployee()" style="margin-right:auto;" id="deleteBtn" disabled>
+      حذف موظف محدد
+    </button>
+    <div class="form-group" style="min-width:140px; max-width:200px;">
+      <label>الموظف المحدد للحذف</label>
+      <select id="deleteSelect">
+        <option value="">— اختر —</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Week Navigation -->
+  <div class="week-nav">
+    <button class="btn btn-outline" onclick="changeWeek(-1)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      الأسبوع السابق
+    </button>
+    <div class="week-label" id="weekLabel">—</div>
+    <button class="btn btn-outline" onclick="changeWeek(1)">
+      الأسبوع القادم
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+  </div>
+
+  <!-- Employee Leave Log -->
+  <div class="legend">
+    <button class="btn btn-primary" onclick="openLeaveLog()">
+      📋 سجل إجازات الموظفين
+    </button>
+  </div>
+
+  <!-- Print Header (only visible when printing) -->
+  <div class="print-header" id="printHeader">جدول العمل الأسبوعي</div>
+
+  <!-- Schedule Table -->
+  <div class="schedule-card">
+    <div class="table-scroll">
+      <table class="schedule-table" id="scheduleTable">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">تحديد وردية / إجازة</div>
+    <div class="modal-sub" id="modalSub">اختر نوع الحضور ليوم <strong></strong></div>
+    <div class="shift-options">
+      <button class="shift-btn sb-morning" onclick="setShift('morning')"><span class="sicon">☀️</span> وردية صباحية</button>
+      <button class="shift-btn sb-evening" onclick="setShift('evening')"><span class="sicon">🌆</span> وردية مسائية</button>
+      <button class="shift-btn sb-night" onclick="setShift('night')"><span class="sicon">🌙</span> وردية ليلية</button>
+      <button class="shift-btn sb-weekly" onclick="setShift('weekly-off')"><span class="sicon">🛋️</span> راحة أسبوعية</button>
+      <button class="shift-btn sb-annual" onclick="setShift('annual-leave')"><span class="sicon">🌴</span> إجازة سنوية</button>
+      <button class="shift-btn sb-sick" onclick="setShift('sick-leave')"><span class="sicon">🏥</span> إجازة مرضية</button>
+      <button class="shift-btn sb-official" onclick="setShift('official-holiday')"><span class="sicon">🎌</span> عطلة رسمية</button>
+      <button class="shift-btn sb-absent" onclick="setShift('absent')"><span class="sicon">❌</span> غياب بدون إذن</button>
+    </div>
+    <div class="modal-footer">
+      <button class="shift-btn sb-clear" onclick="setShift('empty')" style="padding:8px 18px;">
+        <span>🗑️</span> مسح
+      </button>
+      &nbsp;
+      <button class="btn btn-outline" style="color:#374151;border-color:#cbd5e1;" onclick="closeModal()">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- Employee Log Modal -->
+<div class="modal-overlay" id="logModalOverlay" onclick="closeLogModalOutside(event)">
+  <div class="modal log-modal">
+    <div class="modal-title">سجل إجازات الموظفين</div>
+    <div class="modal-sub">اختر الموظف لعرض راحاته وإجازاته وغيابه المسجل — اضغط على أي سجل للانتقال إليه وتعديله</div>
+    <div class="form-group" style="margin-bottom:1rem;">
+      <label for="logEmployeeSelect">الموظف</label>
+      <select id="logEmployeeSelect" onchange="openEmployeeLog(this.value)"></select>
+    </div>
+    <div class="log-summary" id="logSummary"></div>
+    <div class="log-list" id="logList"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" style="color:#374151;border-color:#cbd5e1;" onclick="closeLogModal()">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────
+  const DAYS_AR = ['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
+  const SHIFT_LABELS = {
+    morning:        { label:'صباحية',      icon:'☀️',  cls:'morning'        },
+    evening:        { label:'مسائية',      icon:'🌆',  cls:'evening'        },
+    night:          { label:'ليلية',       icon:'🌙',  cls:'night'          },
+    'weekly-off':   { label:'راحة',        icon:'🛋️', cls:'weekly-off'     },
+    'annual-leave': { label:'سنوية',       icon:'🌴',  cls:'annual-leave'   },
+    'sick-leave':   { label:'مرضية',       icon:'🏥',  cls:'sick-leave'     },
+    'official-holiday': { label:'رسمية',   icon:'🎌',  cls:'official-holiday'},
+    absent:         { label:'غياب',        icon:'❌',  cls:'absent'         },
+    empty:          { label:'',            icon:'',    cls:'empty'          },
+  };
+
+  // أنواع السجلات التي تظهر في "سجل الإجازات والغياب" لكل موظف
+  const LOG_TYPES = ['weekly-off','annual-leave','sick-leave','official-holiday','absent'];
+  const LOG_STYLE = {
+    'weekly-off':       { bg:'#dcfce7', color:'var(--off-weekly)'   },
+    'annual-leave':     { bg:'#cffafe', color:'var(--off-annual)'   },
+    'sick-leave':       { bg:'#fee2e2', color:'var(--off-sick)'     },
+    'official-holiday': { bg:'#fef3c7', color:'var(--off-official)' },
+    absent:             { bg:'#f1f5f9', color:'var(--off-absent)'   },
+  };
+
+  // ── رابط Google Apps Script المدمج (ثابت داخل التطبيق) ──
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwGKrZ8RsUeUTrM7SnQFznzsthmKlHLfNjbVzKyH_fiw2oBSrh9Ce24ADf8f1mC5VdzTQ/exec';
+
+  let employees = [];
+  let schedule  = {};  // { 'empId_dateStr': shiftKey }
+  let currentWeekOffset = 0;
+  let activeCell = null; // { empId, dateStr }
+  let connected  = false;
+
+  // ── Utilities ─────────────────────────────────────────
+  function getWeekDates(offset) {
+    const today = new Date();
+    // Start from Saturday (day 6)
+    const day = today.getDay();
+    const diff = (day + 1) % 7; // days since last Saturday
+    const sat = new Date(today);
+    sat.setDate(today.getDate() - diff + offset * 7);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sat);
+      d.setDate(sat.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }
+
+  function fmtDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function fmtDisplay(d) {
+    return `${d.getDate()}/${d.getMonth()+1}`;
+  }
+
+  function schedKey(empId, dateStr) { return `${empId}_${dateStr}`; }
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+  // ── Rendering ─────────────────────────────────────────
+  function render() {
+    const days  = getWeekDates(currentWeekOffset);
+    const start = days[0], end = days[6];
+
+    document.getElementById('weekLabel').textContent =
+      `الأسبوع: ${fmtDisplay(start)} — ${fmtDisplay(end)} / ${end.getFullYear()}`;
+
+    // Head
+    const head = document.getElementById('tableHead');
+    head.innerHTML = `<tr>
+      <th class="name-col">الموظف</th>
+      ${days.map((d,i)=>`<th class="day-header">${DAYS_AR[i]}<span class="day-date">${fmtDisplay(d)}</span></th>`).join('')}
+    </tr>`;
+
+    // Body
+    const body = document.getElementById('tableBody');
+    if (!employees.length) {
+      body.innerHTML = `<tr><td colspan="${days.length+1}" style="padding:40px;text-align:center;color:#94a3b8;font-size:15px;">
+        لا يوجد موظفون — أضف موظفاً من الأعلى
+      </td></tr>`;
+      return;
+    }
+
+    body.innerHTML = employees.map(emp => {
+      const cells = days.map(d => {
+        const ds = fmtDate(d);
+        const k  = schedKey(emp.id, ds);
+        const sh = schedule[k] || 'empty';
+        const info = SHIFT_LABELS[sh] || SHIFT_LABELS.empty;
+        return `<td onclick="openModal('${emp.id}','${ds}')">
+          <div class="day-cell ${info.cls}">
+            <span class="cell-icon">${info.icon}</span>
+            ${info.label?`<span class="cell-label">${info.label}</span>`:''}
+            <span class="cell-name">${emp.name}</span>
+          </div>
+        </td>`;
+      }).join('');
+
+      return `<tr>
+        <td class="name-cell">${emp.name}
+          ${emp.dept?`<br><span style="font-size:11px;color:#94a3b8;font-weight:400">${emp.dept}</span>`:''}
+        </td>
+        ${cells}
+      </tr>`;
+    }).join('');
+
+    // Update delete dropdown
+    const sel = document.getElementById('deleteSelect');
+    sel.innerHTML = `<option value="">— اختر —</option>` +
+      employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+    document.getElementById('deleteBtn').disabled = !employees.length;
+  }
+
+  // ── Week navigation ────────────────────────────────────
+  function changeWeek(d) {
+    currentWeekOffset += d;
+    render();
+  }
+
+  // ── Employees ─────────────────────────────────────────
+  function addEmployee() {
+    const name = document.getElementById('newEmployeeName').value.trim();
+    const dept = document.getElementById('newEmployeeDept').value.trim();
+    if (!name) { showToast('يرجى إدخال اسم الموظف', 'error'); return; }
+    if (employees.find(e=>e.name===name)) { showToast('هذا الموظف موجود بالفعل', 'error'); return; }
+    employees.push({ id: uid(), name, dept });
+    document.getElementById('newEmployeeName').value = '';
+    document.getElementById('newEmployeeDept').value = '';
+    render();
+    autoSave();
+    showToast(`تمت إضافة ${name} بنجاح`, 'success');
+  }
+
+  function confirmDeleteEmployee() {
+    const id = document.getElementById('deleteSelect').value;
+    if (!id) { showToast('اختر موظفاً للحذف', 'error'); return; }
+    const emp = employees.find(e=>e.id===id);
+    if (!emp) return;
+    if (!confirm(`هل تريد حذف "${emp.name}" وكل جداولها؟`)) return;
+    employees = employees.filter(e=>e.id!==id);
+    Object.keys(schedule).forEach(k=>{ if(k.startsWith(id+'_')) delete schedule[k]; });
+    render();
+    autoSave();
+    showToast(`تم حذف ${emp.name}`, 'info');
+  }
+
+  // ── Modal ─────────────────────────────────────────────
+  function openModal(empId, dateStr) {
+    activeCell = { empId, dateStr };
+    const emp = employees.find(e=>e.id===empId);
+    const [y,m,d] = dateStr.split('-');
+    document.getElementById('modalTitle').textContent = emp ? emp.name : 'موظف';
+    document.getElementById('modalSub').innerHTML = `اختر نوع الحضور ليوم <strong>${d}/${m}/${y}</strong>`;
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+    activeCell = null;
+  }
+
+  function closeModalOutside(e) {
+    if (e.target === document.getElementById('modalOverlay')) closeModal();
+  }
+
+  // ── Employee Log ──────────────────────────────────────
+  function formatLogDate(dateStr) {
+    const [y,m,d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    const dayName = DAYS_AR[(dt.getDay()+1)%7];
+    return `${dayName} ${d}/${m}/${y}`;
+  }
+
+  function weekOffsetForDate(dateStr) {
+    const [y,m,d] = dateStr.split('-').map(Number);
+    const target = new Date(y, m-1, d);
+    const today = new Date();
+    const diff = (today.getDay()+1)%7;
+    const thisSat = new Date(today.getFullYear(), today.getMonth(), today.getDate()-diff);
+    const diffDays = Math.round((target-thisSat)/86400000);
+    return Math.floor(diffDays/7);
+  }
+
+  function openLeaveLog() {
+    if (!employees.length) { showToast('لا يوجد موظفون لعرض سجلهم', 'error'); return; }
+    const sel = document.getElementById('logEmployeeSelect');
+    sel.innerHTML = employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+    openEmployeeLog(sel.value);
+    document.getElementById('logModalOverlay').classList.add('open');
+  }
+
+  function openEmployeeLog(empId) {
+    const emp = employees.find(e=>e.id===empId);
+    if (!emp) return;
+
+    const records = Object.entries(schedule)
+      .filter(([k,v]) => k.startsWith(empId+'_') && LOG_TYPES.includes(v))
+      .map(([k,v]) => ({ date: k.slice(empId.length+1), type: v }))
+      .sort((a,b) => a.date.localeCompare(b.date));
+
+    const counts = {};
+    LOG_TYPES.forEach(t => counts[t] = 0);
+    records.forEach(r => counts[r.type]++);
+
+    document.getElementById('logSummary').innerHTML = LOG_TYPES.map(t => {
+      const info = SHIFT_LABELS[t], style = LOG_STYLE[t];
+      return `<span class="stat-badge" style="background:${style.bg};color:${style.color}">${info.icon} ${info.label}: ${counts[t]}</span>`;
+    }).join('');
+
+    const listEl = document.getElementById('logList');
+    if (!records.length) {
+      listEl.innerHTML = `<div class="log-empty">لا توجد إجازات أو غياب مسجل لهذا الموظف</div>`;
+    } else {
+      listEl.innerHTML = records.map(r => {
+        const info = SHIFT_LABELS[r.type], style = LOG_STYLE[r.type];
+        return `<div class="log-item" style="border-right-color:${style.color}" onclick="gotoLogDate('${empId}','${r.date}')">
+          <span>${formatLogDate(r.date)}</span>
+          <span class="stat-badge" style="background:${style.bg};color:${style.color}">${info.icon} ${info.label}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  function closeLogModal() {
+    document.getElementById('logModalOverlay').classList.remove('open');
+  }
+
+  function closeLogModalOutside(e) {
+    if (e.target === document.getElementById('logModalOverlay')) closeLogModal();
+  }
+
+  function gotoLogDate(empId, dateStr) {
+    closeLogModal();
+    currentWeekOffset = weekOffsetForDate(dateStr);
+    render();
+    openModal(empId, dateStr);
+  }
+
+  function setShift(type) {
+    if (!activeCell) return;
+    const k = schedKey(activeCell.empId, activeCell.dateStr);
+    if (type === 'empty') delete schedule[k];
+    else schedule[k] = type;
+    closeModal();
+    render();
+    autoSave();
+  }
+
+  // ── Toast ─────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type='info') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
+  }
+
+  // ── Status ────────────────────────────────────────────
+  function setStatus(msg, loading=false) {
+    document.getElementById('statusText').textContent = msg;
+    document.getElementById('spinner').classList.toggle('active', loading);
+  }
+
+  function setConnected(val) {
+    connected = val;
+    const b = document.getElementById('connectionBadge');
+    b.className = `connection-badge ${val ? 'connected' : 'disconnected'}`;
+    b.innerHTML = `<span class="dot"></span> ${val ? 'متصل بـ Google Sheets' : 'غير متصل'}`;
+  }
+
+  // ── Google Sheets API ──────────────────────────────────
+  // سبب استخدام GET بدلاً من POST:
+  // Apps Script يعيد redirect عند POST مما يكسر CORS في المتصفح.
+  // الحل: إرسال كل الطلبات عبر GET مع query parameters.
+
+  // طلبات GET بسيطة (ping / load)
+  async function apiGet(params) {
+    const qs = Object.entries(params)
+      .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+      .join('&');
+    try {
+      const res = await fetch(`${SCRIPT_URL}?${qs}`, { method: 'GET', redirect: 'follow' });
+      const text = await res.text();
+      return JSON.parse(text);
+    } catch(err) {
+      console.error('GET error:', err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // طلبات POST للحفظ (بيانات كبيرة)
+  // نرسل البيانات كـ text/plain لتجنب CORS preflight
+  async function apiPost(payload) {
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const text = await res.text();
+      return JSON.parse(text);
+    } catch(err) {
+      console.error('POST error:', err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // حفظ تلقائي إلى Google Sheets — يُستدعى بعد كل تعديل (إضافة/حذف موظف، تحديد وردية...)
+  let busy = false;
+  async function autoSave() {
+    busy = true;
+    setStatus('جاري الحفظ التلقائي إلى Google Sheets...', true);
+    const res = await apiPost({ action: 'save', employees, schedule });
+    if (res && res.success) {
+      setConnected(true);
+      setStatus(`تم الحفظ تلقائياً ✓ — ${new Date().toLocaleTimeString('ar-EG')}`);
+    } else {
+      setConnected(false);
+      setStatus('⚠️ فشل الحفظ التلقائي — تحقق من الاتصال بالإنترنت');
+      showToast(`فشل الحفظ التلقائي: ${res?.error || 'تحقق من الاتصال بالإنترنت'}`, 'error');
+    }
+    busy = false;
+  }
+
+  // تحميل تلقائي من Google Sheets — يُستدعى عند فتح التطبيق
+  async function loadFromSheets() {
+    busy = true;
+    setStatus('جاري تحميل البيانات من Google Sheets...', true);
+    const res = await apiGet({ action: 'load' });
+    if (res && res.success) {
+      employees = res.employees || [];
+      schedule  = res.schedule  || {};
+      setConnected(true);
+      setStatus(`متصل ✓ — تم تحميل ${employees.length} موظف من Google Sheets`);
+      render();
+    } else {
+      setConnected(false);
+      setStatus('⚠️ تعذّر الاتصال بـ Google Sheets — تحقق من الاتصال بالإنترنت');
+      showToast(`فشل تحميل البيانات: ${res?.error || 'تحقق من الاتصال بالإنترنت'}`, 'error');
+    }
+    busy = false;
+  }
+
+  // مزامنة دورية صامتة كل 10 ثوانٍ — لجلب أي تحديثات من مستخدمين/متصفحات أخرى
+  async function syncFromSheets() {
+    // تجاهل المزامنة إذا كان هناك حفظ/تحميل جارٍ، أو نافذة تحديد وردية/سجل مفتوحة (حتى لا تُغلق أثناء الاستخدام)
+    if (busy || activeCell) return;
+    if (document.getElementById('logModalOverlay').classList.contains('open')) return;
+    busy = true;
+    const res = await apiGet({ action: 'load' });
+    if (res && res.success) {
+      employees = res.employees || [];
+      schedule  = res.schedule  || {};
+      setConnected(true);
+      setStatus(`متصل ✓ — آخر مزامنة: ${new Date().toLocaleTimeString('ar-EG')}`);
+      render();
+    } else {
+      setConnected(false);
+    }
+    busy = false;
+  }
+
+  // ── Export & Print ────────────────────────────────────
+
+  // ── طباعة: يفتح نافذة طباعة المتصفح مع ضبط A4 أفقي
+  function printSchedule() {
+    const label = document.getElementById('weekLabel').textContent;
+    document.getElementById('printHeader').textContent = 'جدول العمل الأسبوعي — ' + label;
+    window.print();
+  }
+
+  // ── تصدير صورة JPG للجدول مع دعم المشاركة المباشرة على الموبيل
+  async function exportImage() {
+    if (!employees.length) { showToast('لا يوجد بيانات للتصدير', 'error'); return; }
+
+    showToast('جاري إنشاء الصورة...', 'info');
+
+    // تحميل مكتبة html2canvas إن لم تكن محملة
+    if (!window.html2canvas) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('فشل تحميل المكتبة'));
+        document.head.appendChild(s);
+      });
+    }
+
+    const weekLabel = document.getElementById('weekLabel').textContent;
+    const fileName = `جدول-العمل-${weekLabel.replace(/\//g, '-')}.jpg`;
+
+    // إنشاء wrapper مؤقت بخلفية بيضاء وعنوان للصورة
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:#fff;padding:16px;font-family:Cairo,sans-serif;direction:rtl;width:max-content;';
+
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = 'text-align:center;font-size:18px;font-weight:700;color:#1a3a5c;margin-bottom:10px;';
+    titleEl.textContent = 'جدول العمل الأسبوعي — ' + weekLabel;
+
+    const tableClone = document.getElementById('scheduleTable').cloneNode(true);
+    tableClone.style.cssText = 'border-collapse:collapse;width:100%;min-width:0;';
+    tableClone.querySelectorAll('td,th').forEach(el => { el.style.transition = 'none'; });
+
+    wrapper.appendChild(titleEl);
+    wrapper.appendChild(tableClone);
+    document.body.appendChild(wrapper);
+
+    try {
+      const canvas = await html2canvas(wrapper, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+
+      document.body.removeChild(wrapper);
+
+      // تحويل canvas إلى blob عبر Promise
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+      const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+      // محاولة المشاركة المباشرة — بدون canShare check لأنه غير موثوق على الموبايل
+      if (navigator.share) {
+        try {
+          await navigator.share({ files: [file], title: 'جدول العمل الأسبوعي' });
+          showToast('تمت المشاركة بنجاح ✓', 'success');
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return; // المستخدم أغلق قائمة المشاركة
+          // إذا فشلت المشاركة بأي سبب آخر نكمل للـ fallback
+        }
+      }
+
+      // fallback: تنزيل الصورة مباشرة (ديسكتوب أو متصفح لا يدعم Share API)
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast('تم تصدير الصورة بنجاح ✓', 'success');
+
+    } catch (err) {
+      if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
+      showToast('حدث خطأ أثناء إنشاء الصورة', 'error');
+      console.error(err);
+    }
+  }
+
+  // ── تصدير PDF: يستخدم نافذة طباعة المتصفح مع CSS خاص بـ PDF
+  function exportPDF() {
+    if (!employees.length) { showToast('لا يوجد بيانات للتصدير', 'error'); return; }
+    const label = document.getElementById('weekLabel').textContent;
+    document.getElementById('printHeader').textContent = 'جدول العمل الأسبوعي — ' + label;
+
+    // نفتح نافذة جديدة بـ HTML مبسّط للطباعة كـ PDF
+    const days  = getWeekDates(currentWeekOffset);
+    const start = days[0], end = days[6];
+
+    let tableRows = '';
+    if (employees.length) {
+      tableRows = employees.map(emp => {
+        const cells = days.map(d => {
+          const sh   = schedule[schedKey(emp.id, fmtDate(d))] || 'empty';
+          const info = SHIFT_LABELS[sh] || SHIFT_LABELS.empty;
+          const colorMap = {
+            morning: { bg:'#dbeafe', color:'#0284c7', border:'#0284c7' },
+            evening: { bg:'#ede9fe', color:'#7c3aed', border:'#7c3aed' },
+            night:   { bg:'#1e3a5f', color:'#93c5fd', border:'#3b82f6' },
+            'weekly-off':       { bg:'#dcfce7', color:'#16a34a', border:'#16a34a' },
+            'annual-leave':     { bg:'#cffafe', color:'#0891b2', border:'#0891b2' },
+            'sick-leave':       { bg:'#fee2e2', color:'#dc2626', border:'#dc2626' },
+            'official-holiday': { bg:'#fef3c7', color:'#d97706', border:'#d97706' },
+            absent:             { bg:'#f1f5f9', color:'#374151', border:'#374151' },
+            empty:              { bg:'#f8fafc', color:'#94a3b8', border:'#e2e8f0' },
+          };
+          const c = colorMap[sh] || colorMap.empty;
+          return `<td><div style="background:${c.bg};border:2px solid ${c.border};color:${c.color};
+            border-radius:6px;padding:4px 2px;text-align:center;font-size:11px;font-weight:700;min-height:36px;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;margin:1px;">
+            <span style="font-size:14px">${info.icon}</span>
+            ${info.label ? `<span>${info.label}</span>` : ''}
+          </div></td>`;
+        }).join('');
+        return `<tr>
+          <td style="text-align:right;padding:8px 12px;font-weight:700;color:#1a3a5c;
+            font-size:13px;border-left:3px solid #0ea5e9;white-space:nowrap;background:#fff;">
+            ${emp.name}${emp.dept ? '<br><span style="font-size:10px;color:#94a3b8;font-weight:400">'+emp.dept+'</span>' : ''}
+          </td>${cells}
+        </tr>`;
+      }).join('');
+    }
+
+    const headCols = days.map((d,i) =>
+      `<th style="background:#1a3a5c;color:#fff;padding:10px 6px;font-size:12px;text-align:center;white-space:nowrap;">
+        ${DAYS_AR[i]}<br><span style="font-size:10px;opacity:0.8">${fmtDisplay(d)}</span>
+      </th>`
+    ).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Cairo', Arial, sans-serif; direction: rtl; background: #fff; }
+  @page { size: A4 landscape; margin: 10mm; }
+  @media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+  h1 { text-align: center; color: #1a3a5c; font-size: 18px; margin-bottom: 4px; }
+  .sub { text-align: center; color: #64748b; font-size: 13px; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: #1a3a5c; color: #fff; }
+  td { border-bottom: 1px solid #e2e8f0; padding: 3px; vertical-align: middle; }
+  tr:nth-child(even) td { background: #f8fafc; }
+</style>
+</head>
+<body>
+<h1>📋 جدول العمل الأسبوعي</h1>
+<p class="sub">الأسبوع: ${fmtDisplay(start)} — ${fmtDisplay(end)} / ${end.getFullYear()}</p>
+<table>
+  <thead><tr>
+    <th style="background:#1a3a5c;color:#fff;padding:10px 14px;text-align:right;min-width:130px;font-size:13px;">الموظف</th>
+    ${headCols}
+  </tr></thead>
+  <tbody>${tableRows}</tbody>
+</table>
+<script>
+  window.onload = function() {
+    setTimeout(function(){ window.print(); window.close(); }, 800);
+  };
+<\/script>
+</body></html>`;
+
+    const win = window.open('', '_blank');
+    if (!win) { showToast('يرجى السماح بالنوافذ المنبثقة لتصدير PDF', 'error'); return; }
+    win.document.write(html);
+    win.document.close();
+    showToast('افتح "حفظ كـ PDF" في نافذة الطباعة ✓', 'info');
+  }
+
+  // ── Init ──────────────────────────────────────────────
+  render();
+  loadFromSheets();
+
+  // مزامنة تلقائية مع السحابة كل 10 ثوانٍ
+  setInterval(syncFromSheets, 10000);
+</script>
+</body>
+</html>
