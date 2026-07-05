@@ -896,6 +896,19 @@
   </div>
 </div>
 
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="deleteConfirmOverlay" onclick="closeDeleteConfirmOutside(event)">
+  <div class="modal">
+    <div class="modal-title">تأكيد الحذف</div>
+    <div class="modal-sub" id="deleteConfirmText"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="performDeleteEmployee()">حذف</button>
+      &nbsp;
+      <button class="btn btn-outline" style="color:#374151;border-color:#cbd5e1;" onclick="closeDeleteConfirm()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -1037,14 +1050,35 @@
     showToast(`تمت إضافة ${name} بنجاح`, 'success');
   }
 
+  let pendingDeleteEmployeeId = null;
+
   function confirmDeleteEmployee() {
     const id = document.getElementById('deleteSelect').value;
     if (!id) { showToast('اختر موظفاً للحذف', 'error'); return; }
     const emp = employees.find(e=>e.id===id);
     if (!emp) return;
-    if (!confirm(`هل تريد حذف "${emp.name}" وكل جداولها؟`)) return;
+    pendingDeleteEmployeeId = id;
+    document.getElementById('deleteConfirmText').textContent = `هل تريد حذف "${emp.name}" وكل جداولها؟`;
+    document.getElementById('deleteConfirmOverlay').classList.add('open');
+  }
+
+  function closeDeleteConfirm() {
+    pendingDeleteEmployeeId = null;
+    document.getElementById('deleteConfirmOverlay').classList.remove('open');
+  }
+
+  function closeDeleteConfirmOutside(e) {
+    if (e.target === document.getElementById('deleteConfirmOverlay')) closeDeleteConfirm();
+  }
+
+  function performDeleteEmployee() {
+    const id = pendingDeleteEmployeeId;
+    if (!id) { closeDeleteConfirm(); return; }
+    const emp = employees.find(e=>e.id===id);
+    if (!emp) { closeDeleteConfirm(); return; }
     employees = employees.filter(e=>e.id!==id);
     Object.keys(schedule).forEach(k=>{ if(k.startsWith(id+'_')) delete schedule[k]; });
+    closeDeleteConfirm();
     render();
     autoSave();
     showToast(`تم حذف ${emp.name}`, 'info');
