@@ -1025,12 +1025,13 @@
   // ── Employees ─────────────────────────────────────────
   function addEmployee() {
     const name = document.getElementById('newEmployeeName').value.trim();
-    const dept = document.getElementById('newEmployeeDept').value.trim();
+    const deptEl = document.getElementById('newEmployeeDept');
+    const dept = deptEl ? deptEl.value.trim() : '';
     if (!name) { showToast('يرجى إدخال اسم الموظف', 'error'); return; }
     if (employees.find(e=>e.name===name)) { showToast('هذا الموظف موجود بالفعل', 'error'); return; }
     employees.push({ id: uid(), name, dept });
     document.getElementById('newEmployeeName').value = '';
-    document.getElementById('newEmployeeDept').value = '';
+    if (deptEl) deptEl.value = '';
     render();
     autoSave();
     showToast(`تمت إضافة ${name} بنجاح`, 'success');
