@@ -912,6 +912,10 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <script>
   // ── State ──────────────────────────────────────────────
   const DAYS_AR = ['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
@@ -937,8 +941,19 @@
     absent:             { bg:'#f1f5f9', color:'var(--off-absent)'   },
   };
 
-  // ── رابط Google Apps Script المدمج (ثابت داخل التطبيق) ──
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwGKrZ8RsUeUTrM7SnQFznzsthmKlHLfNjbVzKyH_fiw2oBSrh9Ce24ADf8f1mC5VdzTQ/exec';
+  // ── إعدادات Firebase المدمجة (ثابتة داخل التطبيق) ──
+  const firebaseConfig = {
+    apiKey: "AIzaSyCYlCuupRdCr8_PbpDV5DrMJn1kmbMSmJk",
+    authDomain: "schedule-e5e5d.firebaseapp.com",
+    projectId: "schedule-e5e5d",
+    storageBucket: "schedule-e5e5d.firebasestorage.app",
+    messagingSenderId: "622839650860",
+    appId: "1:622839650860:web:3eee046296a3f413730f89",
+    measurementId: "G-5XMP40C9R6"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const scheduleDocRef = db.collection('schedule').doc('main');
 
   let employees = [];
   let schedule  = {};  // { 'empId_dateStr': shiftKey }
@@ -1206,100 +1221,51 @@
     connected = val;
     const b = document.getElementById('connectionBadge');
     b.className = `connection-badge ${val ? 'connected' : 'disconnected'}`;
-    b.innerHTML = `<span class="dot"></span> ${val ? 'متصل بـ Google Sheets' : 'غير متصل'}`;
+    b.innerHTML = `<span class="dot"></span> ${val ? 'متصل بـ Firebase' : 'غير متصل'}`;
   }
 
-  // ── Google Sheets API ──────────────────────────────────
-  // سبب استخدام GET بدلاً من POST:
-  // Apps Script يعيد redirect عند POST مما يكسر CORS في المتصفح.
-  // الحل: إرسال كل الطلبات عبر GET مع query parameters.
+  // ── Firebase Firestore API ─────────────────────────────
+  // نستخدم مستند واحد ('schedule/main') يحتوي على employees و schedule
+  // مع مزامنة لحظية (onSnapshot) بدل الاستعلام الدوري.
 
-  // طلبات GET بسيطة (ping / load)
-  async function apiGet(params) {
-    const qs = Object.entries(params)
-      .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-      .join('&');
-    try {
-      const res = await fetch(`${SCRIPT_URL}?${qs}`, { method: 'GET', redirect: 'follow' });
-      const text = await res.text();
-      return JSON.parse(text);
-    } catch(err) {
-      console.error('GET error:', err);
-      return { success: false, error: err.message };
-    }
-  }
-
-  // طلبات POST للحفظ (بيانات كبيرة)
-  // نرسل البيانات كـ text/plain لتجنب CORS preflight
-  async function apiPost(payload) {
-    try {
-      const res = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
-      const text = await res.text();
-      return JSON.parse(text);
-    } catch(err) {
-      console.error('POST error:', err);
-      return { success: false, error: err.message };
-    }
-  }
-
-  // حفظ تلقائي إلى Google Sheets — يُستدعى بعد كل تعديل (إضافة/حذف موظف، تحديد وردية...)
+  // حفظ تلقائي إلى Firebase — يُستدعى بعد كل تعديل (إضافة/حذف موظف، تحديد وردية...)
   let busy = false;
   async function autoSave() {
     busy = true;
-    setStatus('جاري الحفظ التلقائي إلى Google Sheets...', true);
-    const res = await apiPost({ action: 'save', employees, schedule });
-    if (res && res.success) {
+    setStatus('جاري الحفظ التلقائي إلى Firebase...', true);
+    try {
+      await scheduleDocRef.set({ employees, schedule });
       setConnected(true);
       setStatus(`تم الحفظ تلقائياً ✓ — ${new Date().toLocaleTimeString('ar-EG')}`);
-    } else {
+    } catch(err) {
+      console.error('Firebase save error:', err);
       setConnected(false);
       setStatus('⚠️ فشل الحفظ التلقائي — تحقق من الاتصال بالإنترنت');
-      showToast(`فشل الحفظ التلقائي: ${res?.error || 'تحقق من الاتصال بالإنترنت'}`, 'error');
+      showToast(`فشل الحفظ التلقائي: ${err.message || 'تحقق من الاتصال بالإنترنت'}`, 'error');
     }
     busy = false;
   }
 
-  // تحميل تلقائي من Google Sheets — يُستدعى عند فتح التطبيق
-  async function loadFromSheets() {
-    busy = true;
-    setStatus('جاري تحميل البيانات من Google Sheets...', true);
-    const res = await apiGet({ action: 'load' });
-    if (res && res.success) {
-      employees = res.employees || [];
-      schedule  = res.schedule  || {};
+  // اشتراك لحظي في مستند الجدول — يُستدعى مرة واحدة عند فتح التطبيق
+  // ويستقبل أي تحديث من مستخدمين/متصفحات أخرى فوراً بدون الحاجة لاستعلام دوري
+  function subscribeToSchedule() {
+    setStatus('جاري تحميل البيانات من Firebase...', true);
+    scheduleDocRef.onSnapshot(snap => {
+      // تجاهل التحديث الوارد أثناء حفظ جارٍ، أو نافذة تحديد وردية/سجل مفتوحة (حتى لا تُغلق أثناء الاستخدام)
+      if (busy || activeCell) return;
+      if (document.getElementById('logModalOverlay').classList.contains('open')) return;
+      const data = snap.exists ? snap.data() : {};
+      employees = data.employees || [];
+      schedule  = data.schedule  || {};
       setConnected(true);
-      setStatus(`متصل ✓ — تم تحميل ${employees.length} موظف من Google Sheets`);
+      setStatus(`متصل ✓ — آخر تحديث: ${new Date().toLocaleTimeString('ar-EG')}`);
       render();
-    } else {
+    }, err => {
+      console.error('Firebase sync error:', err);
       setConnected(false);
-      setStatus('⚠️ تعذّر الاتصال بـ Google Sheets — تحقق من الاتصال بالإنترنت');
-      showToast(`فشل تحميل البيانات: ${res?.error || 'تحقق من الاتصال بالإنترنت'}`, 'error');
-    }
-    busy = false;
-  }
-
-  // مزامنة دورية صامتة كل 10 ثوانٍ — لجلب أي تحديثات من مستخدمين/متصفحات أخرى
-  async function syncFromSheets() {
-    // تجاهل المزامنة إذا كان هناك حفظ/تحميل جارٍ، أو نافذة تحديد وردية/سجل مفتوحة (حتى لا تُغلق أثناء الاستخدام)
-    if (busy || activeCell) return;
-    if (document.getElementById('logModalOverlay').classList.contains('open')) return;
-    busy = true;
-    const res = await apiGet({ action: 'load' });
-    if (res && res.success) {
-      employees = res.employees || [];
-      schedule  = res.schedule  || {};
-      setConnected(true);
-      setStatus(`متصل ✓ — آخر مزامنة: ${new Date().toLocaleTimeString('ar-EG')}`);
-      render();
-    } else {
-      setConnected(false);
-    }
-    busy = false;
+      setStatus('⚠️ تعذّر الاتصال بـ Firebase — تحقق من الاتصال بالإنترنت');
+      showToast(`فشل الاتصال: ${err.message || 'تحقق من الاتصال بالإنترنت'}`, 'error');
+    });
   }
 
   // ── Export & Print ────────────────────────────────────
@@ -1483,10 +1449,7 @@
 
   // ── Init ──────────────────────────────────────────────
   render();
-  loadFromSheets();
-
-  // مزامنة تلقائية مع السحابة كل 10 ثوانٍ
-  setInterval(syncFromSheets, 10000);
+  subscribeToSchedule();
 </script>
 </body>
 </html>
