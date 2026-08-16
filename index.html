@@ -26,6 +26,7 @@
     --off-annual: #0891b2;
     --off-sick: #dc2626;
     --off-official: #d97706;
+    --off-unpaid: #7c2d12;
     --off-absent: #374151;
     --radius: 10px;
   }
@@ -334,6 +335,11 @@
     border-color: var(--off-official);
     color: var(--off-official);
   }
+  .day-cell.unpaid-leave {
+    background: #ffedd5;
+    border-color: var(--off-unpaid);
+    color: var(--off-unpaid);
+  }
   .day-cell.absent {
     background: #f1f5f9;
     border-color: var(--off-absent);
@@ -477,6 +483,9 @@
 
   .modal-overlay.open .modal { transform: scale(1); }
 
+  #modalOverlay .modal { transform: scale(0.675); }
+  #modalOverlay.open .modal { transform: scale(0.75); }
+
   .modal-title {
     font-size: 18px;
     font-weight: 700;
@@ -513,7 +522,7 @@
   }
 
   .shift-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-  .shift-btn .sicon { font-size: 24px; }
+  .shift-btn .sicon { font-size: 8.5px; display: inline-block; transform: scaleX(0.5); }
 
   .sb-morning { background: #dbeafe; border-color: var(--morning); color: var(--morning); }
   .sb-evening { background: #ede9fe; border-color: var(--evening); color: var(--evening); }
@@ -522,6 +531,7 @@
   .sb-annual { background: #cffafe; border-color: var(--off-annual); color: var(--off-annual); }
   .sb-sick { background: #fee2e2; border-color: var(--off-sick); color: var(--off-sick); }
   .sb-official { background: #fef3c7; border-color: var(--off-official); color: var(--off-official); }
+  .sb-unpaid { background: #ffedd5; border-color: var(--off-unpaid); color: var(--off-unpaid); }
   .sb-absent { background: #f1f5f9; border-color: var(--off-absent); color: var(--off-absent); }
   .sb-clear { background: #f8fafc; border-color: #cbd5e1; color: #64748b; }
 
@@ -785,11 +795,21 @@
       background: #d1d5db;
     }
     .modal-overlay.open .modal { transform: translateY(0); }
+    #modalOverlay { align-items: center; padding: 1rem; }
+    #modalOverlay .modal {
+      width: 100%;
+      max-width: 380px;
+      border-radius: 16px;
+      max-height: 85vh;
+      transform: scale(0.75);
+    }
+    #modalOverlay .modal::before { display: none; }
+    #modalOverlay.open .modal { transform: scale(0.75); }
     .modal-title { font-size: 16px; margin-bottom: 4px; margin-top: 6px; }
     .modal-sub { font-size: 12.5px; margin-bottom: 0.9rem; }
     .shift-options { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0.7rem; }
     .shift-btn { padding: 12px 6px; font-size: 12.5px; gap: 4px; border-radius: 12px; min-height: 44px; }
-    .shift-btn .sicon { font-size: 19px; }
+    .shift-btn .sicon { font-size: 7px; display: inline-block; transform: scaleX(0.5); }
     .modal-footer { margin-top: 0.7rem; }
     .modal-footer .btn, .modal-footer .shift-btn { min-height: 44px; }
 
@@ -954,6 +974,7 @@
       <button class="shift-btn sb-annual" onclick="setShift('annual-leave')"><span class="sicon">🌴</span> إجازة سنوية</button>
       <button class="shift-btn sb-sick" onclick="setShift('sick-leave')"><span class="sicon">🏥</span> إجازة مرضية</button>
       <button class="shift-btn sb-official" onclick="setShift('official-holiday')"><span class="sicon">🎌</span> عطلة رسمية</button>
+      <button class="shift-btn sb-unpaid" onclick="setShift('unpaid-leave')"><span class="sicon">📭</span> إجازة بدون أجر</button>
       <button class="shift-btn sb-absent" onclick="setShift('absent')"><span class="sicon">❌</span> غياب بدون إذن</button>
     </div>
     <div class="modal-footer">
@@ -1014,17 +1035,19 @@
     'annual-leave': { label:'سنوية',       icon:'🌴',  cls:'annual-leave'   },
     'sick-leave':   { label:'مرضية',       icon:'🏥',  cls:'sick-leave'     },
     'official-holiday': { label:'رسمية',   icon:'🎌',  cls:'official-holiday'},
+    'unpaid-leave': { label:'بدون أجر',    icon:'📭',  cls:'unpaid-leave'   },
     absent:         { label:'غياب',        icon:'❌',  cls:'absent'         },
     empty:          { label:'',            icon:'',    cls:'empty'          },
   };
 
   // أنواع السجلات التي تظهر في "سجل الإجازات والغياب" لكل موظف
-  const LOG_TYPES = ['weekly-off','annual-leave','sick-leave','official-holiday','absent'];
+  const LOG_TYPES = ['weekly-off','annual-leave','sick-leave','official-holiday','unpaid-leave','absent'];
   const LOG_STYLE = {
     'weekly-off':       { bg:'#dcfce7', color:'var(--off-weekly)'   },
     'annual-leave':     { bg:'#cffafe', color:'var(--off-annual)'   },
     'sick-leave':       { bg:'#fee2e2', color:'var(--off-sick)'     },
     'official-holiday': { bg:'#fef3c7', color:'var(--off-official)' },
+    'unpaid-leave':     { bg:'#ffedd5', color:'var(--off-unpaid)'   },
     absent:             { bg:'#f1f5f9', color:'var(--off-absent)'   },
   };
 
@@ -1469,6 +1492,7 @@
             'annual-leave':     { bg:'#cffafe', color:'#0891b2', border:'#0891b2' },
             'sick-leave':       { bg:'#fee2e2', color:'#dc2626', border:'#dc2626' },
             'official-holiday': { bg:'#fef3c7', color:'#d97706', border:'#d97706' },
+            'unpaid-leave':     { bg:'#ffedd5', color:'#7c2d12', border:'#7c2d12' },
             absent:             { bg:'#f1f5f9', color:'#374151', border:'#374151' },
             empty:              { bg:'#f8fafc', color:'#94a3b8', border:'#e2e8f0' },
           };
