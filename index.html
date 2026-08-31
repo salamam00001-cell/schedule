@@ -561,6 +561,59 @@
   }
   .log-btn:hover { background: var(--surface2); }
 
+  .log-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0.75rem;
+  }
+
+  .log-toolbar select {
+    flex: 1;
+    padding: 7px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Cairo', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+  }
+
+  .log-sort-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    background: #fff;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .log-sort-btn:hover { background: var(--surface2); }
+
+  .log-summary { cursor: default; }
+  .log-summary .stat-badge {
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .log-summary .stat-badge.active {
+    border-color: currentColor;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.05) inset;
+  }
+  .log-summary .stat-badge:hover { transform: translateY(-1px); }
+
+  .log-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
   .log-modal {
     max-width: 480px;
     max-height: 82vh;
@@ -992,13 +1045,18 @@
   <div class="modal log-modal">
     <div class="modal-title">سجل إجازات الموظفين</div>
     <div class="modal-sub">اختر الموظف لعرض راحاته وإجازاته وغيابه المسجل — اضغط على أي سجل للانتقال إليه وتعديله</div>
-    <div class="form-group" style="margin-bottom:1rem;">
+    <div class="form-group" style="margin-bottom:0.75rem;">
       <label for="logEmployeeSelect">الموظف</label>
       <select id="logEmployeeSelect" onchange="openEmployeeLog(this.value)"></select>
+    </div>
+    <div class="log-toolbar">
+      <select id="logYearSelect" onchange="renderEmployeeLog()"></select>
+      <button class="log-sort-btn" id="logSortBtn" onclick="toggleLogSort()" title="ترتيب"></button>
     </div>
     <div class="log-summary" id="logSummary"></div>
     <div class="log-list" id="logList"></div>
     <div class="modal-footer">
+      <button class="btn btn-outline" style="color:#0891b2;border-color:#0891b2;" onclick="exportEmployeeLogPDF()">🖨️ تصدير PDF</button>
       <button class="btn btn-outline" style="color:#374151;border-color:#cbd5e1;" onclick="closeLogModal()">إغلاق</button>
     </div>
   </div>
@@ -1247,37 +1305,81 @@
     return Math.floor(diffDays/7);
   }
 
+  let logFilterType = null;   // نوع السجل المُختار للتصفية (null = الكل)
+  let logSortDesc = true;     // ترتيب تنازلي (الأحدث أولاً) افتراضياً
+  let currentLogEmpId = null;
+
   function openLeaveLog() {
     if (!employees.length) { showToast('لا يوجد موظفون لعرض سجلهم', 'error'); return; }
     const sel = document.getElementById('logEmployeeSelect');
     sel.innerHTML = employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+    logFilterType = null;
+    logSortDesc = true;
     openEmployeeLog(sel.value);
     document.getElementById('logModalOverlay').classList.add('open');
   }
 
   function openEmployeeLog(empId) {
+    currentLogEmpId = empId;
+    logFilterType = null;
+    populateLogYearSelect(empId);
+    renderEmployeeLog();
+  }
+
+  function populateLogYearSelect(empId) {
+    const years = [...new Set(Object.entries(schedule)
+      .filter(([k,v]) => k.startsWith(empId+'_') && LOG_TYPES.includes(v))
+      .map(([k]) => k.slice(empId.length+1, empId.length+5)))].sort((a,b)=>b.localeCompare(a));
+    const sel = document.getElementById('logYearSelect');
+    sel.innerHTML = `<option value="">كل السنوات</option>` + years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  }
+
+  function toggleLogSort() {
+    logSortDesc = !logSortDesc;
+    renderEmployeeLog();
+  }
+
+  function getEmployeeLogRecords(empId) {
+    const yearFilter = document.getElementById('logYearSelect')?.value || '';
+    let records = Object.entries(schedule)
+      .filter(([k,v]) => k.startsWith(empId+'_') && LOG_TYPES.includes(v))
+      .map(([k,v]) => ({ date: k.slice(empId.length+1), type: v }));
+    if (yearFilter) records = records.filter(r => r.date.startsWith(yearFilter));
+    records.sort((a,b) => logSortDesc ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date));
+    return records;
+  }
+
+  function renderEmployeeLog() {
+    const empId = currentLogEmpId;
     const emp = employees.find(e=>e.id===empId);
     if (!emp) return;
 
-    const records = Object.entries(schedule)
-      .filter(([k,v]) => k.startsWith(empId+'_') && LOG_TYPES.includes(v))
-      .map(([k,v]) => ({ date: k.slice(empId.length+1), type: v }))
-      .sort((a,b) => a.date.localeCompare(b.date));
+    const allRecords = getEmployeeLogRecords(empId);
 
     const counts = {};
     LOG_TYPES.forEach(t => counts[t] = 0);
-    records.forEach(r => counts[r.type]++);
+    allRecords.forEach(r => counts[r.type]++);
 
     document.getElementById('logSummary').innerHTML = LOG_TYPES.map(t => {
       const info = SHIFT_LABELS[t], style = LOG_STYLE[t];
-      return `<span class="stat-badge" style="background:${style.bg};color:${style.color}">${info.icon} ${info.label}: ${counts[t]}</span>`;
+      const active = logFilterType === t ? 'active' : '';
+      return `<span class="stat-badge ${active}" style="background:${style.bg};color:${style.color}" onclick="setLogFilter('${t}')">${info.icon} ${info.label}: ${counts[t]}</span>`;
     }).join('');
 
+    document.getElementById('logSortBtn').textContent = logSortDesc ? '⬇️' : '⬆️';
+    document.getElementById('logSortBtn').title = logSortDesc ? 'الأحدث أولاً — اضغط لعكس الترتيب' : 'الأقدم أولاً — اضغط لعكس الترتيب';
+
+    const records = logFilterType ? allRecords.filter(r => r.type === logFilterType) : allRecords;
+
     const listEl = document.getElementById('logList');
-    if (!records.length) {
+    const countLabel = `<div class="log-count">${records.length} سجل${logFilterType ? ' (مصفّى)' : ''}</div>`;
+
+    if (!allRecords.length) {
       listEl.innerHTML = `<div class="log-empty">لا توجد إجازات أو غياب مسجل لهذا الموظف</div>`;
+    } else if (!records.length) {
+      listEl.innerHTML = countLabel + `<div class="log-empty">لا توجد سجلات مطابقة لهذا التصفية</div>`;
     } else {
-      listEl.innerHTML = records.map(r => {
+      listEl.innerHTML = countLabel + records.map(r => {
         const info = SHIFT_LABELS[r.type], style = LOG_STYLE[r.type];
         return `<div class="log-item" style="border-right-color:${style.color}" onclick="gotoLogDate('${empId}','${r.date}')">
           <span>${formatLogDate(r.date)}</span>
@@ -1287,12 +1389,87 @@
     }
   }
 
+  function setLogFilter(type) {
+    logFilterType = (logFilterType === type) ? null : type;
+    renderEmployeeLog();
+  }
+
   function closeLogModal() {
     document.getElementById('logModalOverlay').classList.remove('open');
   }
 
   function closeLogModalOutside(e) {
     if (e.target === document.getElementById('logModalOverlay')) closeLogModal();
+  }
+
+  // ── تصدير سجل الإجازات كـ PDF للطباعة ──────────────────
+  function exportEmployeeLogPDF() {
+    const empId = currentLogEmpId;
+    const emp = employees.find(e=>e.id===empId);
+    if (!emp) { showToast('اختر موظفاً أولاً', 'error'); return; }
+
+    const records = getEmployeeLogRecords(empId);
+    if (!records.length) { showToast('لا توجد سجلات لتصديرها', 'error'); return; }
+
+    const yearFilter = document.getElementById('logYearSelect')?.value || '';
+    const counts = {};
+    LOG_TYPES.forEach(t => counts[t] = 0);
+    records.forEach(r => counts[r.type]++);
+
+    const summaryHtml = LOG_TYPES.map(t => {
+      const info = SHIFT_LABELS[t], style = LOG_STYLE[t];
+      return `<span style="display:inline-flex;align-items:center;gap:4px;background:${style.bg};color:${style.color};
+        padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;margin:2px;">${info.icon} ${info.label}: ${counts[t]}</span>`;
+    }).join('');
+
+    const rowsHtml = records.map(r => {
+      const info = SHIFT_LABELS[r.type], style = LOG_STYLE[r.type];
+      return `<tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;">${formatLogDate(r.date)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:center;">
+          <span style="background:${style.bg};color:${style.color};padding:4px 12px;border-radius:14px;font-size:12px;font-weight:700;">${info.icon} ${info.label}</span>
+        </td>
+      </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Cairo', Arial, sans-serif; direction: rtl; background: #fff; padding: 20px; }
+  @page { size: A4 portrait; margin: 12mm; }
+  @media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+  h1 { text-align: center; color: #1a3a5c; font-size: 20px; margin-bottom: 4px; }
+  .sub { text-align: center; color: #64748b; font-size: 13px; margin-bottom: 16px; }
+  .summary { text-align: center; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1a3a5c; color: #fff; padding: 10px 12px; font-size: 13px; text-align: right; }
+  tr:nth-child(even) td { background: #f8fafc; }
+</style>
+</head>
+<body>
+<h1>📋 سجل إجازات وغياب — ${emp.name}</h1>
+<p class="sub">${emp.dept ? emp.dept + ' — ' : ''}${yearFilter ? 'سنة ' + yearFilter : 'كل السنوات'} — إجمالي السجلات: ${records.length}</p>
+<div class="summary">${summaryHtml}</div>
+<table>
+  <thead><tr><th>التاريخ</th><th style="text-align:center;">النوع</th></tr></thead>
+  <tbody>${rowsHtml}</tbody>
+</table>
+<script>
+  window.onload = function() {
+    setTimeout(function(){ window.print(); window.close(); }, 800);
+  };
+<\/script>
+</body></html>`;
+
+    const win = window.open('', '_blank');
+    if (!win) { showToast('يرجى السماح بالنوافذ المنبثقة لتصدير PDF', 'error'); return; }
+    win.document.write(html);
+    win.document.close();
+    showToast('افتح "حفظ كـ PDF" في نافذة الطباعة ✓', 'info');
   }
 
   function gotoLogDate(empId, dateStr) {
@@ -1385,6 +1562,10 @@
 
   // ── طباعة: يفتح نافذة طباعة المتصفح مع ضبط A4 أفقي
   function printSchedule() {
+    if (window.Android && window.Android.print) {
+      window.Android.print();
+      return;
+    }
     const label = document.getElementById('weekLabel').textContent;
     document.getElementById('printHeader').textContent = 'جدول العمل الأسبوعي — ' + label;
     window.print();
@@ -1438,6 +1619,17 @@
 
       // تحويل canvas إلى blob عبر Promise
       const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+
+      // مشاركة عبر تطبيق أندرويد (WebView) إن وُجد
+      if (window.Android && window.Android.shareImage) {
+        const reader = new FileReader();
+        reader.onloadend = function() {
+          window.Android.shareImage(reader.result, fileName);
+        };
+        reader.readAsDataURL(blob);
+        return;
+      }
+
       const file = new File([blob], fileName, { type: 'image/jpeg' });
 
       // محاولة المشاركة المباشرة — بدون canShare check لأنه غير موثوق على الموبايل
@@ -1471,6 +1663,10 @@
   // ── تصدير PDF: يستخدم نافذة طباعة المتصفح مع CSS خاص بـ PDF
   function exportPDF() {
     if (!employees.length) { showToast('لا يوجد بيانات للتصدير', 'error'); return; }
+    if (window.Android && window.Android.exportPdf) {
+      window.Android.exportPdf();
+      return;
+    }
     const label = document.getElementById('weekLabel').textContent;
     document.getElementById('printHeader').textContent = 'جدول العمل الأسبوعي — ' + label;
 
