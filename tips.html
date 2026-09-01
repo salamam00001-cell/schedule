@@ -272,9 +272,73 @@
         .modal-form-row { display: flex; align-items: center; margin-bottom: 12px; gap: 10px; }
         .modal-form-row label { flex: 0 0 100px; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0; }
         .modal-form-row .form-control { flex: 1; }
+
+        /* ================= LOGIN SCREEN ================= */
+        #loginScreen {
+            position: fixed; inset: 0; z-index: 5000;
+            display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(circle at 50% 20%, #1a2440 0%, var(--bg-deep) 70%);
+            padding: 20px;
+        }
+        .login-box {
+            width: 100%; max-width: 400px; background: var(--bg-card);
+            border: 1px solid var(--border-color); border-radius: 16px;
+            padding: 35px 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .login-box .logo-icon { width: 60px; height: 60px; margin: 0 auto 15px; font-size: 28px; }
+        .login-box h2 { color: var(--gold); font-size: 1.3rem; margin-bottom: 5px; }
+        .login-box p.sub { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 25px; }
+        .login-box .form-group { text-align: right; margin-bottom: 14px; }
+        .login-error { color: var(--danger); font-size: 0.85rem; min-height: 18px; margin-top: 5px; }
+        .login-divider { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 0.8rem; margin: 22px 0; }
+        .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+        .viewer-btn { width: 100%; background: rgba(255,255,255,0.03); border: 1px dashed var(--border-color); color: var(--text-muted); padding: 12px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 700; transition: var(--transition); }
+        .viewer-btn:hover { border-color: var(--gold); color: var(--gold-light); background: var(--gold-glow); }
+        .viewer-btn i { font-size: 1.2rem; }
+
+        /* ================= VIEW-ONLY MODE ================= */
+        body.view-only .admin-only,
+        body.view-only .icon-btn.delete,
+        body.view-only .edit-btn { display: none !important; }
+        .role-badge { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); }
+        body.view-only .role-badge { color: var(--gold-light); border-color: rgba(212,175,55,0.4); }
+        .role-badge i { color: var(--gold); }
+        .logout-btn { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition); }
+        .logout-btn:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
     </style>
 </head>
 <body>
+
+    <!-- ================= LOGIN SCREEN ================= -->
+    <div id="loginScreen">
+        <div class="login-box">
+            <div class="logo-icon" style="background: linear-gradient(135deg, var(--gold), var(--gold-dark)); border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--bg-deep); box-shadow: 0 0 20px var(--gold-glow);"><i class="fas fa-coins"></i></div>
+            <h2>نظام الإكراميات</h2>
+            <p class="sub">سجّل الدخول للمتابعة</p>
+
+            <form id="adminLoginForm" onsubmit="doAdminLogin(event)">
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" id="loginEmail" class="form-control" placeholder="example@email.com" required style="direction:ltr; text-align:left;">
+                </div>
+                <div class="form-group">
+                    <label>كلمة السر</label>
+                    <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required style="direction:ltr; text-align:left;">
+                </div>
+                <div class="login-error" id="loginError"></div>
+                <button type="submit" class="btn btn-gold w-100"><i class="fas fa-sign-in-alt"></i> دخول كأدمن</button>
+            </form>
+
+            <div class="login-divider">أو</div>
+
+            <button type="button" class="viewer-btn" onclick="loginAsViewer()">
+                <i class="fas fa-eye"></i> دخول كمشاهد (عرض فقط)
+            </button>
+        </div>
+    </div>
+
+    <div id="appRoot" style="display:none;">
 
     <div id="init-loader">
         <div class="spinner"></div>
@@ -290,13 +354,17 @@
             </div>
         </div>
         <div class="sync-section">
+            <div class="role-badge no-print" id="roleBadge">
+                <i class="fas fa-user-shield"></i> <span id="roleBadgeText">أدمن</span>
+            </div>
             <div class="sync-status" id="syncStatusUI">
                 <div class="status-dot idle" id="syncDot"></div>
                 <span id="syncText">جاهز</span>
             </div>
-            <button class="btn no-print" onclick="forceSync()">
+            <button class="btn no-print admin-only" onclick="forceSync()">
                 <i class="fas fa-sync"></i> مزامنة
             </button>
+            <button class="logout-btn no-print" title="تسجيل الخروج" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
         </div>
     </header>
 
@@ -346,14 +414,14 @@
             <button class="tab-btn" onclick="switchTab(event, 'tab-employees')"><i class="fas fa-users-cog"></i> الموظفون</button>
             <button class="tab-btn" onclick="switchTab(event, 'tab-distribution')"><i class="fas fa-chart-pie"></i> التوزيع</button>
             <button class="tab-btn" onclick="switchTab(event, 'tab-history'); renderLocalHistory();"><i class="fas fa-history"></i> السجل</button>
-            <button class="tab-btn" onclick="switchTab(event, 'tab-settings')"><i class="fas fa-cogs"></i> الإعدادات</button>
+            <button class="tab-btn admin-only" onclick="switchTab(event, 'tab-settings')"><i class="fas fa-cogs"></i> الإعدادات</button>
         </div>
 
         <div id="tab-revenue" class="tab-content active">
             <div class="grid-2">
                 <div class="content-card">
                     <div class="card-header"><h2>إضافة حصيلة</h2></div>
-                    <form onsubmit="addTip(event)">
+                    <form onsubmit="addTip(event)" class="admin-only">
                         <div class="grid-2">
                             <input type="date" id="tipDate" class="form-control" required>
                             <input type="number" step="0.01" id="tipAmount" class="form-control" placeholder="المبلغ" required>
@@ -362,14 +430,14 @@
                     </form>
                     <div class="table-responsive mt-20">
                         <table>
-                            <thead><tr><th>التاريخ</th><th>المبلغ</th><th>حذف</th></tr></thead>
+                            <thead><tr><th>التاريخ</th><th>المبلغ</th><th class="admin-only">حذف</th></tr></thead>
                             <tbody id="tipsTableBody"></tbody>
                         </table>
                     </div>
                 </div>
                 <div class="content-card">
                     <div class="card-header"><h2>المصاريف</h2></div>
-                    <form onsubmit="addExpense(event)">
+                    <form onsubmit="addExpense(event)" class="admin-only">
                         <input type="text" id="expenseDesc" class="form-control mb-10" placeholder="الوصف" required>
                         <div class="grid-2">
                             <input type="date" id="expenseDate" class="form-control" required>
@@ -379,7 +447,7 @@
                     </form>
                     <div class="table-responsive mt-20">
                         <table>
-                            <thead><tr><th>الوصف</th><th>المبلغ</th><th>حذف</th></tr></thead>
+                            <thead><tr><th>الوصف</th><th>المبلغ</th><th class="admin-only">حذف</th></tr></thead>
                             <tbody id="expensesTableBody"></tbody>
                         </table>
                     </div>
@@ -391,11 +459,11 @@
             <div class="content-card">
                 <div class="card-header">
                     <h2>إدارة الموظفين</h2>
-                    <button class="btn btn-gold" onclick="openEmpModal()"><i class="fas fa-plus"></i> موظف</button>
+                    <button class="btn btn-gold admin-only" onclick="openEmpModal()"><i class="fas fa-plus"></i> موظف</button>
                 </div>
                 <div class="table-responsive">
                     <table>
-                        <thead><tr><th>الاسم</th><th>النقاط</th><th>السلف</th><th>تعديل</th><th>حذف</th></tr></thead>
+                        <thead><tr><th>الاسم</th><th>النقاط</th><th>السلف</th><th class="admin-only">تعديل</th><th class="admin-only">حذف</th></tr></thead>
                         <tbody id="employeesTableBody"></tbody>
                     </table>
                 </div>
@@ -403,7 +471,7 @@
         </div>
 
         <div id="tab-distribution" class="tab-content">
-            <div class="content-card no-print">
+            <div class="content-card no-print admin-only">
                 <div class="card-header"><h2>التحكم بالتوزيع</h2></div>
                 <div class="grid-2">
                     <div>
@@ -431,7 +499,7 @@
                     <h2>كشف التوزيع</h2>
                     <div class="action-btns no-print">
                         <button class="btn" onclick="window.print()"><i class="fas fa-print"></i> طباعة</button>
-                        <button class="btn btn-danger" onclick="openModal('modal-reset')">تصفير</button>
+                        <button class="btn btn-danger admin-only" onclick="openModal('modal-reset')">تصفير</button>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -539,9 +607,69 @@
 
     <div class="toast-container" id="toast-container"></div>
 
+    </div><!-- /appRoot -->
+
     <script>
         let appData = { tips: [], expenses: [], employees: [], reserve: 0, manualPointValue: null };
         let calculated = { totalTips: 0, totalExpenses: 0, totalPoints: 0, pointValue: 0, empShares: [] };
+
+        /* ================= AUTH / LOGIN ================= */
+        const ADMIN_EMAIL = 'salama.m@gmail.com';
+        const ADMIN_PASSWORD = 'Hamada@1968';
+        const AUTH_STORAGE_KEY = 'tip_auth_role';
+        let currentRole = null; // 'admin' | 'viewer'
+
+        function doAdminLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPassword').value;
+            const errEl = document.getElementById('loginError');
+            if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && pass === ADMIN_PASSWORD) {
+                errEl.innerText = '';
+                setRole('admin');
+            } else {
+                errEl.innerText = 'البريد الإلكتروني أو كلمة السر غير صحيحة';
+            }
+        }
+
+        function loginAsViewer() { setRole('viewer'); }
+
+        function setRole(role) {
+            currentRole = role;
+            try { localStorage.setItem(AUTH_STORAGE_KEY, role); } catch (e) {}
+            enterApp();
+        }
+
+        function logout() {
+            try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (e) {}
+            location.reload();
+        }
+
+        function enterApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appRoot').style.display = 'block';
+            document.body.classList.toggle('view-only', currentRole === 'viewer');
+            const badgeText = document.getElementById('roleBadgeText');
+            const badgeIcon = document.querySelector('#roleBadge i');
+            if (currentRole === 'viewer') {
+                badgeText.innerText = 'وضع المشاهدة فقط';
+                if (badgeIcon) badgeIcon.className = 'fas fa-eye';
+            } else {
+                badgeText.innerText = 'أدمن';
+                if (badgeIcon) badgeIcon.className = 'fas fa-user-shield';
+            }
+            initApp();
+        }
+
+        // Blocks any mutating action while in view-only mode (defense in depth,
+        // in addition to hiding the controls via CSS).
+        function requireAdmin() {
+            if (currentRole !== 'admin') {
+                showToast('هذا الإجراء غير متاح في وضع المشاهدة', 'error');
+                return false;
+            }
+            return true;
+        }
 
         const FIREBASE_CONFIG_KEY = 'tip_firebase_config';
         const DEFAULT_FIREBASE_CONFIG = {
@@ -571,7 +699,7 @@
         function historyCollRef() { return mainDocRef().collection('history'); }
         function empCollRef() { return mainDocRef().collection('employees'); }
 
-        window.onload = function() {
+        function initApp() {
             document.getElementById('tipDate').valueAsDate = new Date();
             document.getElementById('expenseDate').valueAsDate = new Date();
             document.getElementById('printDate').innerText = new Date().toLocaleDateString('ar-EG');
@@ -590,6 +718,17 @@
             } else {
                 document.getElementById('init-loader').style.display = 'none';
             }
+        }
+
+        window.onload = function() {
+            // Auto-login if a role was already remembered on this device.
+            let storedRole = null;
+            try { storedRole = localStorage.getItem(AUTH_STORAGE_KEY); } catch (e) {}
+            if (storedRole === 'admin' || storedRole === 'viewer') {
+                currentRole = storedRole;
+                enterApp();
+            }
+            // otherwise the login screen (shown by default) stays visible.
         };
 
         function switchTab(event, tabId) {
@@ -660,7 +799,7 @@
                 document.getElementById('expensesTableBody').innerHTML += `<tr><td>${e.desc}</td><td>${fmt(e.amount)}</td><td><button onclick="del('expenses','${e.id}')" class="icon-btn delete">&times;</button></td></tr>`;
             });
             renderRow([...appData.employees].sort((a,b) => b.points - a.points), 'employeesTableBody', e => {
-                document.getElementById('employeesTableBody').innerHTML += `<tr><td>${e.name}</td><td>${e.points}</td><td class="text-red">${fmt(e.advances)}</td><td><button onclick="editEmp('${e.id}')" class="icon-btn"><i class="fas fa-edit"></i></button></td><td><button onclick="deleteEmp('${e.id}')" class="icon-btn delete"><i class="fas fa-trash"></i></button></td></tr>`;
+                document.getElementById('employeesTableBody').innerHTML += `<tr><td>${e.name}</td><td>${e.points}</td><td class="text-red">${fmt(e.advances)}</td><td class="admin-only"><button onclick="editEmp('${e.id}')" class="icon-btn edit-btn"><i class="fas fa-edit"></i></button></td><td class="admin-only"><button onclick="deleteEmp('${e.id}')" class="icon-btn delete"><i class="fas fa-trash"></i></button></td></tr>`;
             });
             renderRow([...calculated.empShares].sort((a,b) => b.points - a.points), 'distributionTableBody', e => {
                 const netClass = e.net < 0 ? 'text-red' : 'text-green';
@@ -729,23 +868,26 @@
             }
         }
 
-        function forceSync() { saveData().then(res => { if (res.success) showToast('تم الحفظ سحابياً', 'success'); else showToast('فشل الحفظ سحابياً', 'error'); }); }
+        function forceSync() { if (!requireAdmin()) return; saveData().then(res => { if (res.success) showToast('تم الحفظ سحابياً', 'success'); else showToast('فشل الحفظ سحابياً', 'error'); }); }
         function autoSync() { if (db) saveData(); }
 
         function addTip(e) {
             e.preventDefault();
+            if (!requireAdmin()) return;
             appData.tips.push({ id: Date.now(), date: document.getElementById('tipDate').value, amount: document.getElementById('tipAmount').value });
             document.getElementById('tipAmount').value = '';
             runCalc(); autoSync();
         }
         function addExpense(e) {
             e.preventDefault();
+            if (!requireAdmin()) return;
             appData.expenses.push({ id: Date.now(), desc: document.getElementById('expenseDesc').value, date: document.getElementById('expenseDate').value, amount: document.getElementById('expenseAmount').value });
             runCalc(); autoSync();
         }
-        function del(key, id) { appData[key] = appData[key].filter(x => x.id != id); runCalc(); autoSync(); }
+        function del(key, id) { if (!requireAdmin()) return; appData[key] = appData[key].filter(x => x.id != id); runCalc(); autoSync(); }
         
         function openEmpModal() { 
+            if (!requireAdmin()) return;
             document.getElementById('empId').value = ''; 
             document.getElementById('empName').value = ''; 
             document.getElementById('empPoints').value = ''; 
@@ -756,6 +898,7 @@
 
         async function saveEmployee(e) {
             e.preventDefault();
+            if (!requireAdmin()) return;
             const id = document.getElementById('empId').value;
             const currentAdvances = parseFloat(document.getElementById('empAdvances').value || 0);
             const newAdvance = parseFloat(document.getElementById('newAdvanceInput').value || 0);
@@ -799,6 +942,7 @@
         }
 
         async function deleteEmp(id) {
+            if (!requireAdmin()) return;
             const e = appData.employees.find(x => x.id == id);
             if (!e) return;
             if (!confirm(`هل أنت متأكد من حذف الموظف "${e.name}"؟`)) return;
@@ -815,6 +959,7 @@
         }
 
         function editEmp(id) {
+            if (!requireAdmin()) return;
             const e = appData.employees.find(x => x.id == id);
             document.getElementById('empId').value = e.id; 
             document.getElementById('empName').value = e.name; 
@@ -825,6 +970,7 @@
         }
 
         function applyManualPoint() { 
+            if (!requireAdmin()) return;
             const newPointVal = parseFloat(document.getElementById('manualPointInput').value);
             if(!isNaN(newPointVal)) {
                 const totalTips = appData.tips.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
@@ -840,6 +986,7 @@
         }
 
         function resetPointValue() {
+            if (!requireAdmin()) return;
             appData.manualPointValue = null;
             appData.reserve = 0;
             document.getElementById('manualPointInput').value = '';
@@ -847,8 +994,9 @@
             showToast('تمت العودة للقيمة الافتراضية وتصفير الاحتياطي', 'info');
         }
         
-        function applyReserve() { appData.reserve = parseFloat(document.getElementById('manualReserveInput').value || 0); runCalc(); autoSync(); }
+        function applyReserve() { if (!requireAdmin()) return; appData.reserve = parseFloat(document.getElementById('manualReserveInput').value || 0); runCalc(); autoSync(); }
         function saveSettings() {
+            if (!requireAdmin()) return;
             const raw = document.getElementById('firebaseConfigInput').value.trim();
             if (!raw) { showToast('يرجى لصق بيانات Firebase أولاً', 'error'); return; }
             let cfg;
@@ -870,6 +1018,7 @@
         }
 
         async function executeReset() {
+            if (!requireAdmin()) return;
             if (!db) { showToast('لم يتم إعداد الاتصال بـ Firebase بعد', 'error'); return; }
             document.getElementById('syncDot').className = 'status-dot syncing';
             try {
@@ -962,7 +1111,7 @@
                         </div>
                         <div style="display:flex; gap:8px;">
                             <button class="btn" onclick="event.stopPropagation(); printHistoryRecord(${idx})"><i class="fas fa-print"></i> طباعة</button>
-                            <button class="btn btn-danger" onclick="event.stopPropagation(); deleteHistoryRecord(${idx})"><i class="fas fa-trash"></i></button>
+                            <button class="btn btn-danger admin-only" onclick="event.stopPropagation(); deleteHistoryRecord(${idx})"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                     <div id="histDetail_${idx}" style="display:none; margin-top:15px;">
@@ -1083,6 +1232,7 @@
         }
 
         async function deleteHistoryRecord(idx) {
+            if (!requireAdmin()) return;
             if (!confirm('هل أنت متأكد من حذف هذا السجل نهائياً؟')) return;
             const history = window._cloudHistory || [];
             const rec = history[idx];
