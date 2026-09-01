@@ -348,14 +348,10 @@
     <header>
         <div class="logo-section">
             <div class="logo-icon"><i class="fas fa-coins"></i></div>
-            <div class="logo-text">
-                <h1>نظام الإكراميات</h1>
-                <p>إدارة ذكية للفنادق</p>
-            </div>
         </div>
         <div class="sync-section">
             <div class="role-badge no-print" id="roleBadge">
-                <i class="fas fa-user-shield"></i> <span id="roleBadgeText">أدمن</span>
+                <i class="fas fa-user-shield"></i>
             </div>
             <div class="sync-status" id="syncStatusUI">
                 <div class="status-dot idle" id="syncDot"></div>
@@ -649,15 +645,8 @@
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appRoot').style.display = 'block';
             document.body.classList.toggle('view-only', currentRole === 'viewer');
-            const badgeText = document.getElementById('roleBadgeText');
             const badgeIcon = document.querySelector('#roleBadge i');
-            if (currentRole === 'viewer') {
-                badgeText.innerText = 'وضع المشاهدة فقط';
-                if (badgeIcon) badgeIcon.className = 'fas fa-eye';
-            } else {
-                badgeText.innerText = 'أدمن';
-                if (badgeIcon) badgeIcon.className = 'fas fa-user-shield';
-            }
+            if (badgeIcon) badgeIcon.className = currentRole === 'viewer' ? 'fas fa-eye' : 'fas fa-user-shield';
             initApp();
         }
 
