@@ -438,6 +438,12 @@
                     <table>
                         <thead><tr><th>الاسم</th><th>النقاط</th><th>الاستحقاق</th><th>السلف</th><th>الصافي</th></tr></thead>
                         <tbody id="distributionTableBody"></tbody>
+                        <tfoot>
+                            <tr style="font-weight:700; border-top:2px solid var(--gold);">
+                                <td colspan="4" style="text-align:left;">إجمالي المستحق بعد الخصومات</td>
+                                <td id="distributionNetGrandTotal" class="text-green"></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -660,6 +666,8 @@
                 const netClass = e.net < 0 ? 'text-red' : 'text-green';
                 document.getElementById('distributionTableBody').innerHTML += `<tr><td>${e.name}</td><td>${e.points}</td><td>${fmt(e.gross)}</td><td class="text-red">${fmt(e.advances)}</td><td class="${netClass}">${fmt(e.net)}</td></tr>`;
             });
+            const distNetGrandTotal = calculated.empShares.reduce((s, e) => s + parseFloat(e.net || 0), 0);
+            document.getElementById('distributionNetGrandTotal').innerText = fmt(distNetGrandTotal);
         }
 
         async function loadData() {
