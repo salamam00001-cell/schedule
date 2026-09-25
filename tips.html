@@ -1070,10 +1070,10 @@
                     batch.update(empCollRef().doc(String(e.id)), { advances: 0 });
                     e.advances = 0;
                 });
-                batch.set(mainDocRef(), { tips: [], expenses: [], reserve: 0 }, { merge: true });
+                batch.set(mainDocRef(), { tips: [], expenses: [], reserve: 0, manualPointValue: null }, { merge: true });
                 await batch.commit();
 
-                appData.tips = []; appData.expenses = []; appData.reserve = 0;
+                appData.tips = []; appData.expenses = []; appData.reserve = 0; appData.manualPointValue = null;
 
                 document.getElementById('syncDot').className = 'status-dot success';
                 closeModal('modal-reset'); runCalc();
