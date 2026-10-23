@@ -123,49 +123,59 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 <svg class="chart" id="chart" viewBox="0 0 300 84" preserveAspectRatio="none"><defs><linearGradient id="cf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--a)" stop-opacity=".35"/><stop offset="1" stop-color="var(--a)" stop-opacity="0"/></linearGradient></defs>
 <path id="cfill" fill="url(#cf)"/><path id="cline" fill="none" stroke="var(--a)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></div>
 </div>
-<p class="note" id="note">المتصفح لا يسمح بقراءة قوة الواي فاي مباشرة، فالقيم المعروضة تقدير مبني على حالة الشبكة.</p>
+<p class="note" id="note">التحميل والرفع وزمن الاستجابة تُقاس فعليًا عبر خوادم Cloudflare. قوة الواي فاي لا يقرؤها المتصفح مباشرة، لذلك هي تقدير من جودة الاتصال.</p>
 <footer class="credit" dir="ltr"><span>Created by:</span> <b>Moh.Salama</b></footer>
 </main>
 
 <script>
 (function(){
 var $=function(i){return document.getElementById(i)};
-var root=document.documentElement;
+var root=document.documentElement,U='https://speed.cloudflare.com/';
 $('theme').onclick=function(){var d=root.dataset.theme==='dark'||(!root.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);root.dataset.theme=d?'light':'dark'};
-var MAX=200,tk='';
-[0,25,50,100,150,200].forEach(function(v){var a=(135+270*v/MAX)*Math.PI/180,x=150+86*Math.cos(a),y=152+86*Math.sin(a);tk+='<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'">'+v+'</text>'});
-$('ticks').innerHTML=tk;
-function gauge(v){var f=Math.min(1,v/MAX);$('arc').setAttribute('stroke-dashoffset',100-f*100);$('glow').setAttribute('stroke-dashoffset',100-f*100);$('needle').setAttribute('transform','rotate('+(-135+270*f)+' 150 150)');$('val').textContent=v.toFixed(1)}
-gauge(0);
+var MAX=100;
+function ticks(){var tk='';[0,.25,.5,.75,1].forEach(function(p){var v=Math.round(MAX*p),a=(135+270*p)*Math.PI/180,x=150+86*Math.cos(a),y=152+86*Math.sin(a);tk+='<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'">'+v+'</text>'});$('ticks').innerHTML=tk}
+function scale(m){MAX=m;ticks()}
+function gauge(v){var s=[100,250,500,1000,2500],i=0;while(i<s.length-1&&v>s[i]*.92)i++;if(s[i]>MAX)scale(s[i]);var f=Math.min(1,v/MAX);$('arc').setAttribute('stroke-dashoffset',100-f*100);$('glow').setAttribute('stroke-dashoffset',100-f*100);$('needle').setAttribute('transform','rotate('+(-135+270*f)+' 150 150)');$('val').textContent=v.toFixed(1)}
+scale(100);gauge(0);
 var pts=[];
 function chart(){if(pts.length<2)return;var m=Math.max.apply(null,pts)*1.15||1,s=pts.map(function(p,i){return(i/(pts.length-1)*300).toFixed(1)+' '+(80-p/m*74).toFixed(1)});$('cline').setAttribute('d','M'+s.join('L'));$('cfill').setAttribute('d','M'+s.join('L')+'L300 84L0 84Z')}
 function setBar(id,v){$(id).style.width=Math.min(100,v/MAX*100)+'%'}
 function num(id,v,d){$(id).innerHTML=v.toFixed(d)+'<small>'+(id==='pg'||id==='jt'?'ms':'Mbps')+'</small>'}
-function run(label,dur,target,tick){return new Promise(function(res){var t0=performance.now();$('ph').textContent=label;(function f(now){var t=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-Math.min(1,t*1.5),3),n=t<1?(Math.sin(now/90)*.07+Math.sin(now/37)*.04):0,v=Math.max(0,target*e*(1+n));tick(v);if(t<1)requestAnimationFrame(f);else{tick(target);res()}})(t0)})}
-function wifi(q,rtt){var lvl=q>80?4:q>60?3:q>40?2:q>20?1:0,names=['ضعيفة جدًا','ضعيفة','متوسطة','جيدة','ممتازة'];
+function wifi(q){var lvl=q>80?4:q>60?3:q>40?2:q>20?1:0,names=['ضعيفة جدًا','ضعيفة','متوسطة','جيدة','ممتازة'];
 $('w0').setAttribute('fill',lvl>0?'var(--a)':'var(--track)');
 ['w1','w2','w3'].forEach(function(id,i){$(id).setAttribute('class','arc'+(lvl>i+1?' on':''))});
-var bs=$('bars').children;for(var i=0;i<5;i++)bs[i].className=i<lvl+(lvl<4?0:1)&&i<=lvl?'on':'';
-$('wq').textContent=names[lvl];var dbm=Math.round(-90+q*.6);$('wd').textContent='حوالي '+dbm+' dBm — '+Math.round(q)+'٪ (تقدير)'}
+var bs=$('bars').children;for(var i=0;i<5;i++)bs[i].className=i<lvl+(lvl===4?1:0)?'on':'';
+$('wq').textContent=names[lvl];$('wd').textContent='حوالي '+Math.round(-90+q*.6)+' dBm — '+Math.round(q)+'٪ (تقدير)'}
+async function measurePing(){var a=[];for(var i=0;i<11;i++){var t=performance.now();await fetch(U+'__down?bytes=0&r='+Math.random(),{cache:'no-store'});a.push(performance.now()-t);gauge(0);$('ph').textContent='نقيس زمن الاستجابة…'}
+a.shift();var s=a.slice().sort(function(x,y){return x-y}),med=s[Math.floor(s.length/2)],j=0;for(var k=1;k<a.length;k++)j+=Math.abs(a[k]-a[k-1]);return{ping:med,jit:j/(a.length-1)}}
+function sample(ms,getBytes,onTick,abort){return new Promise(function(res,rej){var start=performance.now(),last=start,lastB=0,shown=0,all=[],iv=setInterval(function(){var now=performance.now(),b=getBytes(),mbps=(b-lastB)*8/((now-last)/1000)/1e6,el=now-start;last=now;lastB=b;shown=shown*.55+mbps*.45;if(el>1500)all.push(mbps);onTick(shown);if(el>5000&&b===0){clearInterval(iv);abort();rej(new Error('no data'))}
+if(el>=ms){clearInterval(iv);abort();res(all.length?all.reduce(function(x,y){return x+y})/all.length:shown)}},200)})}
+function download(ms,onTick){var ctl=new AbortController(),bytes=0;
+function stream(){fetch(U+'__down?bytes=100000000&r='+Math.random(),{cache:'no-store',signal:ctl.signal}).then(function(r){var rd=r.body.getReader();return(function pump(){return rd.read().then(function(x){if(x.done)return;bytes+=x.value.length;return pump()})})()}).catch(function(){})}
+for(var i=0;i<4;i++)stream();
+return sample(ms,function(){return bytes},onTick,function(){ctl.abort()})}
+function upload(ms,onTick){var total=0,xs=[],stop=false,blob=new Blob([new Uint8Array(2*1024*1024)]);
+function send(i,ld){if(stop)return;var x=new XMLHttpRequest(),l=0;x.open('POST',U+'__up');x.upload.onprogress=function(e){total+=e.loaded-l;l=e.loaded};x.onload=function(){send(i)};x.onerror=function(){};x.send(blob);xs.push(x)}
+for(var i=0;i<3;i++)send(i);
+return sample(ms,function(){return total},onTick,function(){stop=true;xs.forEach(function(x){try{x.abort()}catch(e){}})})}
 var busy=false;
 $('go').onclick=async function(){
 if(busy)return;busy=true;var b=$('go');b.disabled=true;b.textContent='جارٍ القياس…';
 $('app').classList.add('live');$('stxt').textContent='يقيس الآن';
-['dl','ul','pg','jt'].forEach(function(i){$(i).innerHTML='—<small>'+(i==='pg'||i==='jt'?'ms':'Mbps')+'</small>'});setBar('dlb',0);setBar('ulb',0);
-var c=navigator.connection||{},real=!!c.downlink;
-var dlT=real?Math.min(190,c.downlink*(.85+Math.random()*.3)):30+Math.random()*140;
-var rtt=real&&c.rtt?c.rtt:12+Math.random()*40;
-var upT=dlT*(.25+Math.random()*.35),jit=rtt*(.05+Math.random()*.25);
-pts=[];
-await run('نقيس زمن الاستجابة…',1500,rtt,function(v){num('pg',v,0);gauge(0)});
-num('jt',jit,1);
-await run('نقيس سرعة التحميل…',4200,dlT,function(v){gauge(v);num('dl',v,1);setBar('dlb',v);pts.push(v);if(pts.length>160)pts.shift();chart()});
-gauge(0);pts=[];
-await run('نقيس سرعة الرفع…',3200,upT,function(v){gauge(v);num('ul',v,1);setBar('ulb',v);pts.push(v);if(pts.length>160)pts.shift();chart()});
-var q=Math.max(5,Math.min(98,100-rtt*.9+Math.min(dlT,100)*.15-jit));wifi(q,rtt);
-$('ph').textContent='اكتمل القياس';$('app').classList.remove('live');$('stxt').textContent='اكتمل';
-$('note').textContent=real?'التحميل وزمن الاستجابة مأخوذان من واجهة حالة الشبكة في المتصفح، والباقي تقدير.':'متصفحك لا يوفر بيانات الشبكة، فهذه نتائج تجريبية للعرض فقط.';
-b.disabled=false;b.textContent='قياس جديد';busy=false};
+['dl','ul','pg','jt'].forEach(function(i){$(i).innerHTML='—<small>'+(i==='pg'||i==='jt'?'ms':'Mbps')+'</small>'});setBar('dlb',0);setBar('ulb',0);scale(100);pts=[];
+try{
+var p=await measurePing();num('pg',p.ping,0);num('jt',p.jit,1);
+$('ph').textContent='نقيس سرعة التحميل…';
+var dl=await download(8000,function(v){gauge(v);num('dl',v,1);setBar('dlb',v);pts.push(v);if(pts.length>160)pts.shift();chart()});
+num('dl',dl,1);gauge(dl);setBar('dlb',dl);
+await new Promise(function(r){setTimeout(r,600)});gauge(0);pts=[];scale(100);
+$('ph').textContent='نقيس سرعة الرفع…';
+var ul=await upload(6000,function(v){gauge(v);num('ul',v,1);setBar('ulb',v);pts.push(v);if(pts.length>160)pts.shift();chart()});
+num('ul',ul,1);gauge(ul);setBar('ulb',ul);
+wifi(Math.max(5,Math.min(98,100-p.ping*.6-p.jit*1.5+Math.min(dl,100)*.2)));
+$('ph').textContent='اكتمل القياس';$('stxt').textContent='اكتمل';
+}catch(e){$('ph').textContent='تعذّر الوصول لخادم القياس';$('stxt').textContent='فشل الاتصال';$('note').textContent='تأكد من اتصالك بالإنترنت وأن الصفحة مفتوحة من رابط https (مثل GitHub Pages) وليس من داخل معاينة محظورة.'}
+$('app').classList.remove('live');b.disabled=false;b.textContent='قياس جديد';busy=false};
 })();
 </script>
 </body>
