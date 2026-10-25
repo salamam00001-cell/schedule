@@ -210,7 +210,7 @@ const acts={
   sort:v=>{sort=v;render()},
   fc:v=>{cf=+v;render()},
   setc:v=>{cur.c=+v;paintEd()},
-  menu:()=>dlg(mi('vArch','Archive ('+notes.filter(n=>n.archived&&!n.deleted).length+')')+mi('vTrash','Trash ('+notes.filter(n=>n.deleted&&!n.purged).length+')')+mi('sync','Sync with Firebase')+mi('exp','Export backup')+mi('imp','Import backup')+mi('about','About')),
+  menu:()=>dlg(mi('vArch','Archive ('+notes.filter(n=>n.archived&&!n.deleted).length+')')+mi('vTrash','Trash ('+notes.filter(n=>n.deleted&&!n.purged).length+')')+(db?mi('signout','Sign out'):mi('sync','Sign in & sync'))+mi('exp','Export backup')+mi('imp','Import backup')+mi('about','About')),
   noop:()=>{},
   about:()=>dlg('<div style="position:relative;padding:44px 24px 30px;text-align:center;line-height:1.9"><button data-a="noop" aria-label="Close" style="position:absolute;top:4px;right:6px;width:42px;height:42px;font-size:24px;color:#ccc">✕</button><div style="font-size:20px;font-weight:500">Created by Moh.Salama</div><a href="mailto:salama.m@gmail.com" style="color:#7ecdc0;text-decoration:none">salama.m@gmail.com</a></div>'),
   vArch:()=>{view='archive';render()},
@@ -222,6 +222,8 @@ const acts={
   exp:()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(notes)],{type:'application/json'}));a.download='notes-backup.json';a.click()},
   imp:()=>$('file').click(),
   sync:()=>initSync(),
+  doLogin:()=>doLogin(),
+  signout:()=>signOut(),
   pin:()=>{cur.pinned=!cur.pinned;toast(cur.pinned?'Pinned':'Unpinned')},
   color:()=>dlg('<div class="cs">'+C.map((c,i)=>`<button class="cc" data-a="setc" data-v="${i}" style="background:${c[0]}"></button>`).join('')+'</div>'),
   type:()=>{
@@ -317,27 +319,61 @@ $('file').onchange=async e=>{
 };
 
 /* ===== مزامنة Firebase: users/{uid}/notes/{id} — الأحدث يكسب، والحذف بعلامة deleted ===== */
-let db=null,uid=null;
+let db=null,uid=null,auth=null,unsub=null;
 const load=s=>new Promise((ok,no)=>{const x=document.createElement('script');x.src=s;x.onload=ok;x.onerror=no;document.head.appendChild(x)});
+/* تسجيل الدخول بالإيميل والباسورد (حسابات تنشئها أنت من Firebase Console > Authentication > Users)
+   الجلسة بتتحفظ تلقائياً في المتصفح/الـ WebView، فمش هتحتاج تدخل البيانات كل مرة. */
 async function initSync(){
   if(!FIREBASE_CONFIG)return toast('Add FIREBASE_CONFIG in the script first');
   if(db)return toast('Sync already on');
   try{
-    const b='https://www.gstatic.com/firebasejs/10.12.2/firebase-';
-    await load(b+'app-compat.js');await load(b+'auth-compat.js');await load(b+'firestore-compat.js');
-    firebase.initializeApp(FIREBASE_CONFIG);
-    uid=(await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider())).user.uid;
-    db=firebase.firestore();
-    let first=true;
-    db.collection('users').doc(uid).collection('notes').onSnapshot(s=>{
-      const r={};
-      s.forEach(d=>{const n=d.data();r[n.id]=n;const l=notes.find(x=>x.id===n.id);if(!l)notes.push(n);else if(l.updated<n.updated)Object.assign(l,n)});
-      if(first){first=false;notes.forEach(l=>{if(!r[l.id]||r[l.id].updated<l.updated)syncPush(l)})}
-      try{localStorage.setItem(KEY,JSON.stringify(notes))}catch(e){}
-      if($('ed').hidden)render();
-    });
-    toast('Signed in, syncing');
+    if(!window.firebase){
+      const b='https://www.gstatic.com/firebasejs/10.12.2/firebase-';
+      await load(b+'app-compat.js');await load(b+'auth-compat.js');await load(b+'firestore-compat.js');
+    }
+    if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+    auth=firebase.auth();
+    const u=await new Promise(r=>{const o=auth.onAuthStateChanged(x=>{o();r(x)})});
+    if(u)startSync(u);else loginDlg();
   }catch(err){toast('Sync failed: '+(err.code||err.message))}
+}
+function loginDlg(msg){
+  let em='';try{em=localStorage.getItem('notes_email')||''}catch(e){}
+  dlg('<label>Email<input type="email" id="lem" dir="ltr" autocomplete="username" value="'+esc(em)+'"></label>'
+    +'<label>Password<input type="password" id="lpw" dir="ltr" autocomplete="current-password"></label>'
+    +(msg?'<div style="padding:4px 20px 10px;color:#e8643c;font-size:14px">'+esc(msg)+'</div>':'')
+    +mi('doLogin','Sign in'));
+}
+async function doLogin(){
+  const em=$('lem').value.trim(),pw=$('lpw').value;
+  if(!em||!pw)return loginDlg('Enter email and password');
+  try{
+    const c=await auth.signInWithEmailAndPassword(em,pw);
+    try{localStorage.setItem('notes_email',em)}catch(e){}
+    startSync(c.user);
+  }catch(err){
+    const bad=['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-email'].includes(err.code);
+    loginDlg(bad?'Wrong email or password':'Sign in failed: '+(err.code||err.message));
+  }
+}
+function startSync(user){
+  uid=user.uid;db=firebase.firestore();
+  try{localStorage.setItem('notes_sync','1')}catch(e){}
+  let first=true;
+  unsub=db.collection('users').doc(uid).collection('notes').onSnapshot(s=>{
+    const r={};
+    s.forEach(d=>{const n=d.data();r[n.id]=n;const l=notes.find(x=>x.id===n.id);if(!l)notes.push(n);else if(l.updated<n.updated)Object.assign(l,n)});
+    if(first){first=false;notes.forEach(l=>{if(!r[l.id]||r[l.id].updated<l.updated)syncPush(l)})}
+    try{localStorage.setItem(KEY,JSON.stringify(notes))}catch(e){}
+    if($('ed').hidden)render();
+  },err=>toast('Sync error: '+(err.code||err.message)));
+  toast('Signed in, syncing');
+}
+async function signOut(){
+  try{if(unsub)unsub();unsub=null;if(auth)await auth.signOut()}catch(e){}
+  db=null;uid=null;
+  try{localStorage.removeItem('notes_sync')}catch(e){}
+  toast('Signed out');
 }
 function syncPush(n){
   if(!db)return;
@@ -345,6 +381,8 @@ function syncPush(n){
   db.collection('users').doc(uid).collection('notes').doc(n.id).set(c).catch(()=>toast('Upload failed'));
 }
 render();
+/* لو المزامنة كانت شغالة قبل كده، ابدأها تلقائياً عند فتح الصفحة */
+try{if(localStorage.getItem('notes_sync')==='1')initSync()}catch(e){}
 </script>
 </body>
 </html>
