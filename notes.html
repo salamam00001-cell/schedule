@@ -45,6 +45,8 @@ nav button.on{color:#7ecdc0}
 .d{height:52px;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:2px solid transparent}
 .d.t{color:#7ecdc0;font-weight:700}
 .d.s{border-color:#7ecdc0}
+.d{position:relative}
+.d .ic{position:absolute;top:2px;right:3px;font-size:13px;line-height:1}
 .d em{display:flex;gap:3px;height:6px}
 .d em s{width:6px;height:6px;border-radius:50%}
 #cl{margin-top:14px}
@@ -78,6 +80,7 @@ textarea.ln{height:100%}
 <div id="top">
   <div class="tb">
     <h1 id="ttl">Notes</h1>
+    <button id="ffb" aria-label="Folders"><svg viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8z"/></svg></button>
     <button id="cfb" aria-label="Colors"><svg viewBox="0 0 24 24" style="width:30px;height:30px"><rect x="2" y="2" width="9.5" height="9.5" fill="#4fb3d9"/><rect x="12.5" y="2" width="9.5" height="9.5" fill="#d8e04a"/><rect x="2" y="12.5" width="9.5" height="9.5" fill="#9a8fc0"/><rect x="12.5" y="12.5" width="9.5" height="9.5" fill="#e8643c"/></svg></button>
     <button id="dots" aria-label="Sort"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
   </div>
@@ -124,12 +127,14 @@ const FIREBASE_CONFIG = {
 const C=[['#e0e0e0','#6f6f6f'],['#c9a227','#857a2a'],['#e8922e','#a8661a'],['#d9534f','#8f2f2c'],['#b06fc4','#6e4380'],['#4a90d9','#2d5f94'],['#2fb5a3','#1d7468'],['#6bbf59','#3e7a32']];
 const SORTS={updated:'Sort by modified time',created:'Sort by created time',title:'Sort by title',color:'Sort by color'};
 const KEY='notes_v2';
-let notes=[],view='list',sort='updated',cf=-1,cur=null,mode='view',cm=new Date(),sel=null,tm;
+let notes=[],view='list',sort='updated',cf=-1,ff='',cur=null,mode='view',cm=new Date(),sel=null,tm;
 try{notes=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}
 const $=i=>document.getElementById(i);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const toast=t=>{let e=$('toast');if(!e){e=document.createElement('div');e.id='toast';document.body.appendChild(e)}e.textContent=t;e.hidden=false;clearTimeout(tm);tm=setTimeout(()=>e.hidden=true,2500)};
 const title=n=>n.type==='list'?(n.title||(n.items[0]||{}).t||''):(n.body.split('\n').find(l=>l.trim())||'');
+const folders=()=>[...new Set(notes.filter(n=>n.folder&&!n.deleted&&!n.purged).map(n=>n.folder))].sort((a,b)=>a.localeCompare(b,'ar'));
+const ICONS=['⭐','❤️','🎂','🎉','📌','💼','🛒','✈️','💊','📞','💡','🔥','📅','🏠','🚗','💰','🎓','🍽️','✅','⚠️'];
 const linkify=l=>esc(l).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
 const same=(a,b)=>new Date(a).toDateString()===new Date(b).toDateString();
 function fmt(t){const d=new Date(t);if(same(t,Date.now()))return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
@@ -141,6 +146,7 @@ function persist(n){n.updated=Date.now();try{localStorage.setItem(KEY,JSON.strin
 function visible(){
   let l=notes.filter(n=>{
     if(cf>=0&&n.c!==cf)return false;
+    if(ff&&n.folder!==ff)return false;
     if(view==='trash')return n.deleted&&!n.purged;
     if(n.deleted)return false;
     if(view==='archive')return !!n.archived;
@@ -152,11 +158,11 @@ function visible(){
   const k={updated:(a,b)=>b.updated-a.updated,created:(a,b)=>b.created-a.created,title:(a,b)=>title(a).localeCompare(title(b),'ar'),color:(a,b)=>a.c-b.c}[sort];
   return l.sort((a,b)=>(!!b.pinned-!!a.pinned)||k(a,b));
 }
-const row=n=>`<div class="row" data-id="${n.id}"><i style="background:${C[n.c][0]}"></i><b dir="auto">${n.pinned?'★ ':''}${esc(title(n)||'Untitled')}</b>${view==='archive'||view==='trash'?`<button class="rs" data-r="${n.id}">Restore</button>`:`<span>${fmt(n.updated)}</span>`}</div>`;
+const row=n=>`<div class="row" data-id="${n.id}"><i style="background:${C[n.c][0]}"></i><b dir="auto">${n.pinned?'★ ':''}${n.icon?esc(n.icon)+' ':''}${esc(title(n)||'Untitled')}</b>${view==='archive'||view==='trash'?`<button class="rs" data-r="${n.id}">Restore</button>`:`<span>${fmt(n.updated)}</span>`}</div>`;
 function render(){
   const c=view==='cal',x=view==='archive'||view==='trash';
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view||(b.dataset.v==='search'&&!$('sb').hidden)||(b.dataset.v==='menu'&&x)));
-  $('ttl').textContent={archive:'Archive',trash:'Trash'}[view]||'Notes';
+  $('ttl').textContent={archive:'Archive',trash:'Trash'}[view]||ff||'Notes';
   $('cal').hidden=!c;$('list').hidden=c;$('sortb').hidden=c||x;$('ab').hidden=!x;
   $('ab').textContent=view==='trash'?'Empty trash':'Restore all';
   if(c)return renderCal();
@@ -172,8 +178,8 @@ function renderCal(){
   notes.filter(x=>!x.deleted&&!x.archived).forEach(x=>[x.updated,x.remind&&new Date(x.remind).getTime()].filter(Boolean).forEach(t=>{(map[dk(t)]=map[dk(t)]||new Set()).add(x)}));
   let h=`<div class="ch"><button data-m="-1">‹</button><b>${cm.toLocaleDateString('en-US',{month:'long',year:'numeric'})}</b><button data-m="1">›</button></div><div class="g">`+'SMTWTFS'.split('').map(x=>`<u>${x}</u>`).join('');
   for(let i=0;i<f;i++)h+='<div></div>';
-  for(let d=1;d<=n;d++){const k=y+'-'+m+'-'+d,s=[...(map[k]||[])].slice(0,3);
-    h+=`<div class="d ${k===today?'t':''} ${k===sel?'s':''}" data-k="${k}">${d}<em>${s.map(x=>`<s style="background:${C[x.c][0]}"></s>`).join('')}</em></div>`}
+  for(let d=1;d<=n;d++){const k=y+'-'+m+'-'+d,s=[...(map[k]||[])].slice(0,3),ic=[...(map[k]||[])].find(x=>x.icon);
+    h+=`<div class="d ${k===today?'t':''} ${k===sel?'s':''}" data-k="${k}">${d}${ic?`<span class="ic">${esc(ic.icon)}</span>`:''}<em>${s.map(x=>`<s style="background:${C[x.c][0]}"></s>`).join('')}</em></div>`}
   const l=[...(map[sel]||[])];
   $('cal').innerHTML=h+'</div><div id="cl">'+(l.length?l.map(row).join(''):'<div class="empty">No notes on this day</div>')+'</div>';
 }
@@ -200,8 +206,13 @@ document.querySelector('nav').onclick=e=>{
 $('q').oninput=render;
 $('sortb').onclick=$('dots').onclick=()=>dlg(Object.keys(SORTS).map(k=>mi('sort',SORTS[k],k)).join(''));
 $('cfb').onclick=()=>dlg(mi('fc','All colors',-1)+'<div class="cs">'+C.map((c,i)=>`<button class="cc" data-a="fc" data-v="${i}" style="background:${c[0]}"></button>`).join('')+'</div>');
+$('ffb').onclick=()=>{
+  const f=folders();
+  dlg(mi('ff','All notes',-1)+f.map((x,i)=>mi('ff',esc(x)+' ('+notes.filter(n=>n.folder===x&&!n.deleted&&!n.archived).length+')',i)).join('')
+    +(f.length?'':'<div style="padding:14px 20px;color:#999;font-size:14px">No folders yet. Open a note, tap ⋮ then Folder.</div>'));
+};
 function newNote(type){
-  openEd({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),type,title:'',body:'',items:type==='list'?[{t:'',d:false}]:[],c:cf>=0?cf:1,pinned:false,remind:'',created:Date.now(),updated:Date.now(),deleted:false,_new:true});
+  openEd({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),type,title:'',body:'',items:type==='list'?[{t:'',d:false}]:[],c:cf>=0?cf:1,pinned:false,remind:'',created:Date.now(),updated:Date.now(),deleted:false,folder:ff,icon:'',_new:true});
   if(type==='list'){const t=$('lt');if(t)t.focus()}
 }
 $('fab').onclick=()=>dlg('<div style="padding:18px 20px 8px;font-size:20px;font-weight:500">Add</div>'+mi('newt','Text')+mi('newl','Checklist'));
@@ -215,6 +226,13 @@ $('dlg').onclick=e=>{
   else if(e.target===$('dlg'))$('dlg').hidden=true;
 };
 const acts={
+  ff:v=>{const f=folders();ff=+v<0?'':(f[+v]||'');render()},
+  icon:()=>dlg('<div class="cs">'+ICONS.map(i=>`<button class="cc" data-a="seti" data-v="${i}" style="font-size:26px;background:#3a3a3a">${i}</button>`).join('')+'</div>'+mi('seti','No icon','')),
+  seti:v=>{cur.icon=v;toast(v?'Icon set':'Icon removed')},
+  fold:()=>{const f=folders();dlg(mi('setf','No folder',-1)+f.map((x,i)=>mi('setf',(cur.folder===x?'✓ ':'')+esc(x),i)).join('')+mi('fnewd','+ New folder'))},
+  setf:v=>{const f=folders();cur.folder=+v<0?'':(f[+v]||'');toast(cur.folder?'Moved to '+cur.folder:'Removed from folder')},
+  fnewd:()=>{dlg('<label>Folder name<input id="fni" dir="auto" maxlength="40"></label>'+mi('fnew','Create'));$('fni').focus()},
+  fnew:()=>{const v=$('fni').value.trim();if(v){cur.folder=v;toast('Moved to '+v)}},
   newt:()=>newNote('text'),
   newl:()=>newNote('list'),
   sort:v=>{sort=v;render()},
@@ -249,7 +267,7 @@ const acts={
 
 /* ===== المحرر ===== */
 let snap='';
-const sig=n=>JSON.stringify([n.title||'',n.body||'',(n.items||[]).filter(i=>i.t.trim()),n.c,!!n.pinned,n.remind||'',n.type]);
+const sig=n=>JSON.stringify([n.title||'',n.body||'',(n.items||[]).filter(i=>i.t.trim()),n.c,!!n.pinned,n.remind||'',n.type,n.icon||'',n.folder||'']);
 function openEd(n){cur=JSON.parse(JSON.stringify(n));snap=sig(cur);mode=n._new?'edit':'view';$('ed').hidden=false;paintEd()}
 function paintEd(){
   $('ed').style.setProperty('--hc',C[cur.c][1]);
@@ -278,7 +296,7 @@ $('ec').onclick=e=>{
   else if(t.id==='add'){cur.items.push({t:'',d:false});paintEd();const a=$('ec').querySelectorAll('input[type=text]');a[a.length-1].focus()}
 };
 $('ep').onclick=()=>{mode=mode==='edit'?'view':'edit';paintEd()};
-$('em').onclick=()=>dlg(cur.deleted?mi('restore','Restore')+mi('purge','Delete forever'):mi('pin',cur.pinned?'Unpin':'Pin to top')+mi('color','Color')+mi('type',cur.type==='list'?'Convert to text note':'Convert to checklist')+mi('rem','Reminder')+(cur.archived?mi('unarch','Restore from archive'):mi('archive','Archive'))+mi('del','Move to trash'));
+$('em').onclick=()=>dlg(cur.deleted?mi('restore','Restore')+mi('purge','Delete forever'):mi('pin',cur.pinned?'Unpin':'Pin to top')+mi('color','Color')+mi('icon','Icon')+mi('fold','Folder')+mi('type',cur.type==='list'?'Convert to text note':'Convert to checklist')+mi('rem','Reminder')+(cur.archived?mi('unarch','Restore from archive'):mi('archive','Archive'))+mi('del','Move to trash'));
 function save(p,msg){
   cur.items=cur.items.filter(i=>i.t.trim());
   Object.assign(cur,p);delete cur._new;
