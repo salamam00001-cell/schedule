@@ -210,6 +210,7 @@ $('cfb').onclick=()=>dlg(mi('fc','All colors',-1)+'<div class="cs">'+C.map((c,i)
 $('ffb').onclick=()=>{
   const f=folders();
   dlg(mi('ff','All notes',-1)+f.map((x,i)=>mi('ff',esc(x)+' ('+notes.filter(n=>n.folder===x&&!n.deleted&&!n.archived).length+')',i)).join('')
+    +(ff?mi('delf','🗑 Delete folder “'+esc(ff)+'” (notes return to All notes)'):'')
     +(f.length?'':'<div style="padding:14px 20px;color:#999;font-size:14px">No folders yet. Open a note, tap ⋮ then Folder.</div>'));
 };
 function newNote(type){
@@ -227,6 +228,12 @@ $('dlg').onclick=e=>{
   else if(e.target===$('dlg'))$('dlg').hidden=true;
 };
 const acts={
+  delf:()=>{
+    const l=notes.filter(n=>n.folder===ff);
+    if(!confirm('Delete folder "'+ff+'"? Its '+l.length+' note(s) will go back to All notes.'))return;
+    l.forEach(n=>{n.folder='';persist(n)});
+    toast('Folder deleted');ff='';render();
+  },
   ff:v=>{const f=folders();ff=+v<0?'':(f[+v]||'');render()},
   icon:()=>dlg('<div class="cs">'+ICONS.map(i=>`<button class="cc" data-a="seti" data-v="${i}" style="font-size:26px;background:#3a3a3a">${i}</button>`).join('')+'</div>'+mi('seti','No icon','')),
   seti:v=>{cur.icon=v;toast(v?'Icon set':'Icon removed')},
