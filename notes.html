@@ -147,6 +147,7 @@ function visible(){
   let l=notes.filter(n=>{
     if(cf>=0&&n.c!==cf)return false;
     if(ff&&n.folder!==ff)return false;
+    if(!ff&&view==='list'&&n.folder&&!$('q').value.trim())return false;
     if(view==='trash')return n.deleted&&!n.purged;
     if(n.deleted)return false;
     if(view==='archive')return !!n.archived;
@@ -229,8 +230,8 @@ const acts={
   ff:v=>{const f=folders();ff=+v<0?'':(f[+v]||'');render()},
   icon:()=>dlg('<div class="cs">'+ICONS.map(i=>`<button class="cc" data-a="seti" data-v="${i}" style="font-size:26px;background:#3a3a3a">${i}</button>`).join('')+'</div>'+mi('seti','No icon','')),
   seti:v=>{cur.icon=v;toast(v?'Icon set':'Icon removed')},
-  fold:()=>{const f=folders();dlg(mi('setf','No folder',-1)+f.map((x,i)=>mi('setf',(cur.folder===x?'✓ ':'')+esc(x),i)).join('')+mi('fnewd','+ New folder'))},
-  setf:v=>{const f=folders();cur.folder=+v<0?'':(f[+v]||'');toast(cur.folder?'Moved to '+cur.folder:'Removed from folder')},
+  fold:()=>{const f=folders();dlg((cur.folder?mi('setf','↩ Remove from folder (back to All notes)',-1):'')+f.map((x,i)=>mi('setf',(cur.folder===x?'✓ ':'')+esc(x),i)).join('')+mi('fnewd','+ New folder'))},
+  setf:v=>{const f=folders();cur.folder=+v<0?'':(f[+v]||'');toast(cur.folder?'Moved to '+cur.folder:'Back to All notes')},
   fnewd:()=>{dlg('<label>Folder name<input id="fni" dir="auto" maxlength="40"></label>'+mi('fnew','Create'));$('fni').focus()},
   fnew:()=>{const v=$('fni').value.trim();if(v){cur.folder=v;toast('Moved to '+v)}},
   newt:()=>newNote('text'),
