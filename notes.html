@@ -200,7 +200,11 @@ document.querySelector('nav').onclick=e=>{
 $('q').oninput=render;
 $('sortb').onclick=$('dots').onclick=()=>dlg(Object.keys(SORTS).map(k=>mi('sort',SORTS[k],k)).join(''));
 $('cfb').onclick=()=>dlg(mi('fc','All colors',-1)+'<div class="cs">'+C.map((c,i)=>`<button class="cc" data-a="fc" data-v="${i}" style="background:${c[0]}"></button>`).join('')+'</div>');
-$('fab').onclick=()=>openEd({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),type:'text',title:'',body:'',items:[],c:cf>=0?cf:1,pinned:false,remind:'',created:Date.now(),updated:Date.now(),deleted:false,_new:true});
+function newNote(type){
+  openEd({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),type,title:'',body:'',items:type==='list'?[{t:'',d:false}]:[],c:cf>=0?cf:1,pinned:false,remind:'',created:Date.now(),updated:Date.now(),deleted:false,_new:true});
+  if(type==='list'){const t=$('lt');if(t)t.focus()}
+}
+$('fab').onclick=()=>dlg('<div style="padding:18px 20px 8px;font-size:20px;font-weight:500">Add</div>'+mi('newt','Text')+mi('newl','Checklist'));
 
 /* ===== الحوارات ===== */
 const mi=(a,t,v='')=>`<button data-a="${a}" data-v="${v}">${t}</button>`;
@@ -211,6 +215,8 @@ $('dlg').onclick=e=>{
   else if(e.target===$('dlg'))$('dlg').hidden=true;
 };
 const acts={
+  newt:()=>newNote('text'),
+  newl:()=>newNote('list'),
   sort:v=>{sort=v;render()},
   fc:v=>{cf=+v;render()},
   setc:v=>{cur.c=+v;paintEd()},
@@ -242,7 +248,9 @@ const acts={
 };
 
 /* ===== المحرر ===== */
-function openEd(n){cur=JSON.parse(JSON.stringify(n));mode=n._new?'edit':'view';$('ed').hidden=false;paintEd()}
+let snap='';
+const sig=n=>JSON.stringify([n.title||'',n.body||'',(n.items||[]).filter(i=>i.t.trim()),n.c,!!n.pinned,n.remind||'',n.type]);
+function openEd(n){cur=JSON.parse(JSON.stringify(n));snap=sig(cur);mode=n._new?'edit':'view';$('ed').hidden=false;paintEd()}
 function paintEd(){
   $('ed').style.setProperty('--hc',C[cur.c][1]);
   $('et').textContent=title(cur);
@@ -296,7 +304,7 @@ function closeEd(skip){
     if(!empty){
       const isNew=cur._new;delete cur._new;
       if(isNew)notes.push(cur);else notes[notes.findIndex(x=>x.id===cur.id)]=cur;
-      persist(cur);
+      if(isNew||sig(cur)!==snap)persist(cur);
     }
   }
   $('ed').hidden=true;render();
