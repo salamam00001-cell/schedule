@@ -259,6 +259,8 @@ const acts={
   imp:()=>$('file').click(),
   sync:()=>initSync(),
   doLogin:()=>doLogin(),
+  doSignup:()=>doSignup(),
+  doReset:()=>doReset(),
   signout:()=>signOut(),
   pin:()=>{cur.pinned=!cur.pinned;toast(cur.pinned?'Pinned':'Unpinned')},
   color:()=>dlg('<div class="cs">'+C.map((c,i)=>`<button class="cc" data-a="setc" data-v="${i}" style="background:${c[0]}"></button>`).join('')+'</div>'),
@@ -380,7 +382,7 @@ function loginDlg(msg){
   dlg('<label>Email<input type="email" id="lem" dir="ltr" autocomplete="username" value="'+esc(em)+'"></label>'
     +'<label>Password<input type="password" id="lpw" dir="ltr" autocomplete="current-password"></label>'
     +(msg?'<div style="padding:4px 20px 10px;color:#e8643c;font-size:14px">'+esc(msg)+'</div>':'')
-    +mi('doLogin','Sign in'));
+    +mi('doLogin','Sign in')+mi('doSignup','Create account')+mi('doReset','Forgot password'));
 }
 async function doLogin(){
   const em=$('lem').value.trim(),pw=$('lpw').value;
@@ -393,6 +395,25 @@ async function doLogin(){
     const bad=['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-email'].includes(err.code);
     loginDlg(bad?'Wrong email or password':'Sign in failed: '+(err.code||err.message));
   }
+}
+async function doSignup(){
+  const em=$('lem').value.trim(),pw=$('lpw').value;
+  if(!em||!pw)return loginDlg('Enter email and password');
+  if(pw.length<6)return loginDlg('Password must be at least 6 characters');
+  try{
+    const c=await auth.createUserWithEmailAndPassword(em,pw);
+    try{localStorage.setItem('notes_email',em)}catch(e){}
+    startSync(c.user);
+  }catch(err){
+    const m={'auth/email-already-in-use':'This email already has an account, use Sign in','auth/invalid-email':'Invalid email','auth/weak-password':'Password is too weak'};
+    loginDlg(m[err.code]||'Sign up failed: '+(err.code||err.message));
+  }
+}
+async function doReset(){
+  const em=$('lem').value.trim();
+  if(!em)return loginDlg('Enter your email first, then tap Forgot password');
+  try{await auth.sendPasswordResetEmail(em);loginDlg('Password reset email sent to '+em)}
+  catch(err){loginDlg(err.code==='auth/invalid-email'?'Invalid email':'Failed: '+(err.code||err.message))}
 }
 function startSync(user){
   uid=user.uid;db=firebase.firestore();
@@ -410,7 +431,9 @@ function startSync(user){
 async function signOut(){
   try{if(unsub)unsub();unsub=null;if(auth)await auth.signOut()}catch(e){}
   db=null;uid=null;
-  try{localStorage.removeItem('notes_sync')}catch(e){}
+  notes.length=0;view='list';
+  try{localStorage.removeItem('notes_sync');localStorage.removeItem(KEY)}catch(e){}
+  render();
   toast('Signed out');
 }
 function syncPush(n){
