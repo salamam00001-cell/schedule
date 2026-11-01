@@ -1696,11 +1696,13 @@
     const tableClone = document.getElementById('scheduleTable').cloneNode(true);
     tableClone.style.cssText = 'border-collapse:collapse;width:100%;min-width:0;';
     tableClone.querySelectorAll('td,th').forEach(el => { el.style.transition = 'none'; });
-    // ثبّت مقاسات الصورة بغض النظر عن تنسيق شاشة الموبايل (الجدول هناك مضغوط على عرض الشاشة)
-    tableClone.style.setProperty('width', '900px', 'important');
-    tableClone.style.setProperty('min-width', '900px', 'important');
-    tableClone.style.setProperty('table-layout', 'auto', 'important');
-    tableClone.querySelectorAll('.cell-day, .cell-name').forEach(el => el.style.setProperty('display', 'block', 'important'));
+    // على الموبايل: الصورة بنفس عرض وشكل الجدول الظاهر على الشاشة
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      const liveW = document.getElementById('scheduleTable').offsetWidth;
+      wrapper.style.width = (liveW + 32) + 'px';
+      tableClone.style.width = liveW + 'px';
+      titleEl.style.fontSize = '14px';
+    }
 
     wrapper.appendChild(titleEl);
     wrapper.appendChild(tableClone);
@@ -1708,7 +1710,7 @@
 
     try {
       const canvas = await html2canvas(wrapper, {
-        scale: 2,
+        scale: window.matchMedia('(max-width: 768px)').matches ? 4 : 2,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false
