@@ -109,6 +109,9 @@
   }
   .btn-outline:hover { background: rgba(255,255,255,0.18); }
 
+  .btn-soft { background: #e0f2fe; color: var(--primary); border: 1px solid #bae6fd; }
+  .btn-soft:hover { background: #bae6fd; }
+
   .btn-danger { background: #dc2626; color: #fff; }
   .btn-danger:hover { background: #b91c1c; }
 
@@ -984,6 +987,7 @@
     .tools-panel .tools-log { display: grid; margin: 0 0 0.5rem; padding: 0.7rem; background: #fff; border-radius: 14px; }
     .tools-panel .tools-log { display: block; }
     .tools-panel .tools-log .btn { width: 100%; justify-content: center; min-height: 42px; }
+    .tools-panel .tools-log .btn + .btn { margin-top: 8px; }
     .tools-panel .add-employee-section .form-group label { display: block; font-size: 11px; }
     .tools-panel .add-employee-section .form-group input,
     .tools-panel .add-employee-section .form-group select { min-height: 42px; height: 42px; font-size: 15px; }
@@ -1062,6 +1066,7 @@
   </div>
   <div class="legend tools-log">
     <button class="btn btn-primary" onclick="closeTools();openLeaveLog()">📋 سجل إجازات الموظفين</button>
+    <button class="btn btn-soft" onclick="closeTools();copyPrevWeek()">📑 نسخ جدول الأسبوع السابق</button>
   </div>
   </div>
 
@@ -1082,6 +1087,9 @@
   <div class="legend">
     <button class="btn btn-primary" onclick="openLeaveLog()">
       📋 سجل إجازات الموظفين
+    </button>
+    <button class="btn btn-soft" onclick="copyPrevWeek()">
+      📑 نسخ جدول الأسبوع السابق
     </button>
   </div>
 
@@ -1296,6 +1304,33 @@
     sel.innerHTML = `<option value="">— اختر —</option>` +
       employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
     document.getElementById('deleteBtn').disabled = !employees.length;
+  }
+
+  // ── نسخ جدول الأسبوع السابق إلى الأسبوع المعروض ──────────
+  // ينسخ الورديات والراحة الأسبوعية فقط (الإجازات والغياب مش بتتكرر)،
+  // وبيملأ الخلايا الفاضية بس ومش بيغيّر أي خلية متسجلة في الأسبوع الحالي.
+  const COPYABLE_SHIFTS = ['morning','evening','night','weekly-off'];
+  function copyPrevWeek() {
+    if (!employees.length) { showToast('لا يوجد موظفون', 'error'); return; }
+    const prev = getWeekDates(currentWeekOffset - 1);
+    const cur  = getWeekDates(currentWeekOffset);
+    let copied = 0, found = 0;
+    employees.forEach(emp => {
+      prev.forEach((pd, i) => {
+        const v = schedule[schedKey(emp.id, fmtDate(pd))];
+        if (!COPYABLE_SHIFTS.includes(v)) return;
+        found++;
+        const k = schedKey(emp.id, fmtDate(cur[i]));
+        if (schedule[k]) return;
+        schedule[k] = v;
+        copied++;
+      });
+    });
+    if (!found)  { showToast('لا توجد ورديات في الأسبوع السابق للنسخ', 'error'); return; }
+    if (!copied) { showToast('الأسبوع الحالي مليان بالفعل — لم يتم نسخ شيء', 'info'); return; }
+    render();
+    autoSave();
+    showToast(`تم نسخ ${copied} خلية من الأسبوع السابق ✓`, 'success');
   }
 
   // ── Employees / log panel (mobile) ─────────────────────
