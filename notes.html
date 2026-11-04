@@ -58,7 +58,9 @@ nav button.on{color:#7ecdc0}
 .meta{display:flex;justify-content:space-between;color:#9a9a9a;font-weight:500;font-size:17px;padding:8px 14px}
 #ec{flex:1;overflow-x:hidden;overflow-y:auto;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
 .ln{display:block;width:100%;min-height:100%;border:0;outline:none;background:repeating-linear-gradient(to bottom,transparent 0 33px,color-mix(in srgb,var(--hc) 55%,#000) 33px 34px) local;color:#fff;font:inherit;font-size:20px;line-height:34px;padding:0 14px;overflow-wrap:anywhere;resize:none;unicode-bidi:plaintext;text-align:start}
-#vw a{color:#a9b8ff}
+#vw a,.ti a,.ab{color:#3d9bff!important;text-decoration:underline;text-underline-offset:3px;word-break:break-all}
+.ti{flex:1;font-size:18px;line-height:1.35;padding:8px 0;min-height:38px;overflow-wrap:anywhere;unicode-bidi:plaintext;text-align:start}
+.ci.d .ti{text-decoration:line-through;color:#777}
 textarea.ln{height:100%}
 .lt{width:100%;background:none;border:0;border-bottom:1px solid #333;outline:none;color:#fff;font:inherit;font-size:20px;font-weight:500;padding:6px 14px}
 .ci{display:flex;align-items:center;gap:10px;padding:2px 14px;border-bottom:1px solid #222}
@@ -154,7 +156,12 @@ const toast=t=>{let e=$('toast');if(!e){e=document.createElement('div');e.id='to
 const title=n=>n.type==='list'?(n.title||(n.items[0]||{}).t||''):(n.body.split('\n').find(l=>l.trim())||'');
 const folders=()=>[...new Set(notes.filter(n=>n.folder&&!n.deleted&&!n.purged).map(n=>n.folder))].sort((a,b)=>a.localeCompare(b,'ar'));
 const ICONS=['⭐','❤️','🎂','🎉','📌','💼','🛒','✈️','💊','📞','💡','🔥','📅','🏠','🚗','💰','🎓','🍽️','✅','⚠️'];
-const linkify=l=>esc(l).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+const linkify=l=>esc(l).replace(/(https?:\/\/[^\s<\u0600-\u06FF]+|www\.[^\s<\u0600-\u06FF]+)|([A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/g,(m,u,e)=>{
+  const t=m.match(/(?:&quot;|&gt;|[.,:!?)\]])+$/),tail=t?t[0]:'',x=tail?m.slice(0,-tail.length):m;
+  if(!x)return m;
+  const h=e?'mailto:'+x:(/^www\./i.test(x)?'https://'+x:x);
+  return '<a href="'+h+'" target="_blank" rel="noopener">'+x+'</a>'+tail;
+});
 const same=(a,b)=>new Date(a).toDateString()===new Date(b).toDateString();
 function fmt(t){const d=new Date(t);if(same(t,Date.now()))return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   return d.toLocaleDateString('en-US',d.getFullYear()===new Date().getFullYear()?{month:'short',day:'numeric'}:{month:'short',day:'numeric',year:'numeric'})}
@@ -267,7 +274,7 @@ const acts={
   setc:v=>{cur.c=+v;paintEd()},
   menu:()=>dlg(mi('vArch','Archive ('+notes.filter(n=>n.archived&&!n.deleted).length+')')+mi('vTrash','Trash ('+notes.filter(n=>n.deleted&&!n.purged).length+')')+(db?mi('signout','Sign out'):mi('sync','Sign in & sync'))+mi('exp','Export backup')+mi('imp','Import backup')+mi('about','About')),
   noop:()=>{},
-  about:()=>dlg('<div style="position:relative;padding:44px 24px 30px;text-align:center;line-height:1.9"><button data-a="noop" aria-label="Close" style="position:absolute;top:4px;right:6px;width:42px;height:42px;font-size:24px;color:#ccc">✕</button><div style="font-size:20px;font-weight:500">Created by Moh.Salama</div><a href="mailto:salama.m@gmail.com" style="color:#7ecdc0;text-decoration:none">salama.m@gmail.com</a></div>'),
+  about:()=>dlg('<div style="position:relative;padding:44px 24px 30px;text-align:center;line-height:1.9"><button data-a="noop" aria-label="Close" style="position:absolute;top:4px;right:6px;width:42px;height:42px;font-size:24px;color:#ccc">✕</button><div style="font-size:20px;font-weight:500">Created by Moh.Salama</div><a class="ab" href="mailto:salama.m@gmail.com">salama.m@gmail.com</a></div>'),
   vArch:()=>{view='archive';render()},
   vTrash:()=>{view='trash';render()},
   archive:()=>save({archived:true},'Moved to archive'),
@@ -294,7 +301,9 @@ const acts={
 /* ===== المحرر ===== */
 let snap='';
 const sig=n=>JSON.stringify([n.title||'',n.body||'',(n.items||[]).filter(i=>i.t.trim()),n.c,!!n.pinned,n.remind||'',n.type,n.icon||'',n.folder||'']);
-function openEd(n){cur=JSON.parse(JSON.stringify(n));snap=sig(cur);mode=n._new?'edit':'view';$('ed').hidden=false;paintEd()}
+let edPushed=false,ignorePop=0;
+function openEd(n){cur=JSON.parse(JSON.stringify(n));snap=sig(cur);mode=n._new?'edit':'view';$('ed').hidden=false;paintEd();
+  if(!edPushed){history.pushState({ed:1},'');edPushed=true}}
 function paintEd(){
   $('ed').style.setProperty('--hc',C[cur.c][1]);
   $('et').textContent=title(cur);
@@ -304,7 +313,7 @@ function paintEd(){
   const ec=$('ec');
   if(cur.type==='list'){
     const ro=mode!=='edit'?'readonly':'',ed=mode==='edit';
-    ec.innerHTML=(!ed&&!cur.title?'':`<input id="lt" class="lt" dir="auto" placeholder="Title" ${ro} value="${esc(cur.title||'')}">`)+cur.items.map((it,i)=>`<div class="ci ${it.d?'d':''}"><input type="checkbox" data-i="${i}" ${it.d?'checked':''} ${cur.deleted?'disabled':''}><input type="text" dir="auto" data-t="${i}" ${ro} value="${esc(it.t)}">${ed?`<button data-x="${i}">✕</button>`:''}</div>`).join('')+(ed?'<button id="add">+ Add item</button>':'');
+    ec.innerHTML=(!ed&&!cur.title?'':`<input id="lt" class="lt" dir="auto" placeholder="Title" ${ro} value="${esc(cur.title||'')}">`)+cur.items.map((it,i)=>`<div class="ci ${it.d?'d':''}"><input type="checkbox" data-i="${i}" ${it.d?'checked':''} ${cur.deleted?'disabled':''}>${ed?`<input type="text" dir="auto" data-t="${i}" value="${esc(it.t)}">`:`<div class="ti" dir="auto">${linkify(it.t)}</div>`}${ed?`<button data-x="${i}">✕</button>`:''}</div>`).join('')+(ed?'<button id="add">+ Add item</button>':'');
   }else if(mode==='edit'){
     ec.innerHTML='<textarea id="bd" class="ln" dir="auto"></textarea>';$('bd').value=cur.body;$('bd').focus();
   }else ec.innerHTML='<div class="ln" id="vw">'+cur.body.split('\n').map(l=>`<div dir="auto">${linkify(l)||'&nbsp;'}</div>`).join('')+'</div>';
@@ -352,8 +361,29 @@ function closeEd(skip){
     }
   }
   $('ed').hidden=true;render();
+  if(edPushed){edPushed=false;ignorePop++;history.back()}
 }
 $('eb').onclick=()=>closeEd();
+/* زر الرجوع في الموبايل: يحفظ الملاحظة تلقائياً ويرجع للشاشة الرئيسية */
+window.addEventListener('popstate',()=>{
+  if(ignorePop>0){ignorePop--;return}
+  if($('ed').hidden)return;
+  if(!$('dlg').hidden){$('dlg').hidden=true;history.pushState({ed:1},'');return}
+  edPushed=false;closeEd();
+});
+/* حفظ تلقائي لو التطبيق راح للخلفية أو اتقفل وفي ملاحظة مفتوحة */
+function autoSave(){
+  if($('ed').hidden||!cur||cur.deleted)return;
+  const s=JSON.parse(JSON.stringify(cur));s.items=s.items.filter(i=>i.t.trim());
+  if(!s.body.trim()&&!s.items.length&&!(s.title||'').trim())return;
+  const isNew=!!s._new;delete s._new;
+  if(!isNew&&sig(s)===snap)return;
+  const i=notes.findIndex(x=>x.id===s.id);
+  if(i<0)notes.push(s);else notes[i]=s;
+  persist(s);cur.updated=s.updated;delete cur._new;snap=sig(s);
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')autoSave()});
+window.addEventListener('pagehide',autoSave);
 
 /* ===== التذكيرات (والصفحة مفتوحة؛ في أندرويد استخدم Capacitor Local Notifications) ===== */
 setInterval(()=>{
