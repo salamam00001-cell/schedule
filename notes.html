@@ -27,6 +27,7 @@ svg{width:26px;height:26px;fill:currentColor}
 #ab{color:#7ecdc0}
 #list{padding:10px 12px 150px}
 .row{display:flex;align-items:stretch;background:#000;margin-bottom:8px;min-height:52px;cursor:pointer;border:1px solid #1a1a1a}
+.row{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .row i{width:11px;flex:none}
 .row b{flex:1;font-weight:500;font-size:18px;line-height:1.2;padding:8px 12px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere;align-self:center}
 .row span{align-self:center;color:#a0a0a0;font-weight:500;padding:0 14px 0 8px;font-size:15px;white-space:nowrap;min-width:74px;text-align:left}
@@ -274,6 +275,11 @@ const acts={
   setc:v=>{cur.c=+v;paintEd()},
   menu:()=>dlg(mi('vArch','Archive ('+notes.filter(n=>n.archived&&!n.deleted).length+')')+mi('vTrash','Trash ('+notes.filter(n=>n.deleted&&!n.purged).length+')')+(db?mi('signout','Sign out'):mi('sync','Sign in & sync'))+mi('exp','Export backup')+mi('imp','Import backup')+mi('about','About')),
   noop:()=>{},
+  rArch:id=>rowSet(id,{archived:true},'Moved to archive'),
+  rUnarch:id=>rowSet(id,{archived:false},'Restored from archive'),
+  rDel:id=>rowSet(id,{deleted:true,deletedAt:Date.now()},'Moved to trash'),
+  rRestore:id=>rowSet(id,{deleted:false,deletedAt:null},'Restored'),
+  rPurge:id=>{if(!confirm('Delete this note forever?'))return;rowSet(id,{deleted:true,purged:true,body:'',items:[],title:''},'Deleted forever')},
   about:()=>dlg('<div style="position:relative;padding:44px 24px 30px;text-align:center;line-height:1.9"><button data-a="noop" aria-label="Close" style="position:absolute;top:4px;right:6px;width:42px;height:42px;font-size:24px;color:#ccc">✕</button><div style="font-size:20px;font-weight:500">Created by Moh.Salama</div><a class="ab" href="mailto:salama.m@gmail.com">salama.m@gmail.com</a></div>'),
   vArch:()=>{view='archive';render()},
   vTrash:()=>{view='trash';render()},
@@ -297,6 +303,28 @@ const acts={
   rclr:()=>{cur.remind=''},
   del:()=>{if(cur._new)return closeEd(true);save({deleted:true,deletedAt:Date.now()},'Moved to trash')}
 };
+
+/* ===== ضغطة مطولة على النوت: أرشيف / سلة المهملات ===== */
+let lpT=null,lpX=0,lpY=0,lpFired=false;
+function rowSet(id,p,msg){const n=notes.find(x=>x.id===id);if(!n)return;Object.assign(n,p);persist(n);render();toast(msg)}
+function rowMenu(r){
+  const n=notes.find(x=>x.id===r.dataset.id);
+  if(!n||!$('dlg').hidden)return;
+  lpFired=true;try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}
+  const h='<div dir="auto" style="padding:16px 20px;font-weight:500;border-bottom:1px solid #3a3a3a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(title(n)||'Untitled')+'</div>';
+  dlg(h+(n.deleted
+    ?mi('rRestore','Restore',n.id)+mi('rPurge','Delete forever',n.id)
+    :(n.archived?mi('rUnarch','Restore from archive',n.id):mi('rArch','Add to archive',n.id))+mi('rDel','Move to trash',n.id)));
+}
+document.addEventListener('pointerdown',e=>{
+  const r=e.target.closest('.row');
+  if(!r||e.button>0||e.target.closest('button'))return;
+  lpX=e.clientX;lpY=e.clientY;clearTimeout(lpT);lpT=setTimeout(()=>rowMenu(r),500);
+});
+document.addEventListener('pointermove',e=>{if(lpT&&Math.hypot(e.clientX-lpX,e.clientY-lpY)>10){clearTimeout(lpT);lpT=null}});
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(lpT);lpT=null;if(lpFired)setTimeout(()=>lpFired=false,400)}));
+document.addEventListener('click',e=>{if(lpFired){e.stopPropagation();e.preventDefault()}},true);
+document.addEventListener('contextmenu',e=>{const r=e.target.closest('.row');if(r){e.preventDefault();if(!lpFired)rowMenu(r)}});
 
 /* ===== المحرر ===== */
 let snap='';
