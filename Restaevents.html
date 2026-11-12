@@ -1,6 +1,10 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" style="background:#f7f2ea">
 <head>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" type="image/png" href="002.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +14,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@100;300;400;500;700;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     
     <!-- Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js" crossorigin="anonymous" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js';s.crossOrigin='anonymous';s.onload=function(){if(typeof lucide!=='undefined')lucide.createIcons();};document.head.appendChild(s);"></script>
@@ -32,8 +36,6 @@
             }, 200);
         })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
 
     <!-- Firebase (Realtime Database) -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -41,7 +43,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
 
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20261112a">
+    <link rel="stylesheet" href="theme.css?v=1">
 </head>
 <body>
     <script>window.__restaSplashStart = Date.now();</script>
@@ -59,8 +62,8 @@
         <div class="bg-white rounded-[2rem] p-8 md:p-10 max-w-md w-full shadow-2xl animate-fade-in relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#A88A45] to-[#6E1418]"></div>
             <div class="text-center mb-10 mt-2">
-                <div class="w-24 h-24 bg-gradient-to-br from-slate-50 to-slate-100 rounded-[1.5rem] mx-auto mb-6 flex items-center justify-center border border-slate-200 shadow-sm relative group">
-                    <div class="absolute inset-0 bg-[#A88A45] opacity-0 group-hover:opacity-10 rounded-[1.5rem] transition-opacity duration-300"></div>
+                <div class="mx-auto mb-4 flex items-center justify-center">
+                    
                     <i data-lucide="shield-check" class="w-12 h-12 text-[#6E1418]"></i>
                 </div>
                 <h2 class="text-3xl font-black text-[#6E1418] tracking-tight">مرحباً بك</h2>
@@ -101,7 +104,7 @@
     <div id="biometricLockScreen" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
         <div class="bg-white rounded-[2rem] p-8 md:p-10 max-w-md w-full shadow-2xl animate-fade-in relative overflow-hidden text-center">
             <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#A88A45] to-[#6E1418]"></div>
-            <div id="biometricLockIconWrap" class="w-24 h-24 bg-gradient-to-br from-slate-50 to-slate-100 rounded-[1.5rem] mx-auto mb-6 flex items-center justify-center border border-slate-200 shadow-sm">
+            <div id="biometricLockIconWrap" class="mx-auto mb-4 flex items-center justify-center">
                 <i data-lucide="fingerprint" class="w-12 h-12 text-[#6E1418]"></i>
             </div>
             <h2 class="text-2xl font-black text-[#6E1418] tracking-tight mb-1">تسجيل الدخول بالبصمة</h2>
@@ -123,9 +126,18 @@
         <!-- Content injected by JS -->
     </div>
 
+    <!-- شريط التنقل السفلي (موبايل) — يستدعي دوال التطبيق الأصلية فقط -->
+    <nav id="mobileNav" aria-label="التنقل">
+        <button type="button" class="active" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i data-lucide="calendar"></i><span>التقويم</span></button>
+        <button type="button" onclick="toggleBookingsListModal()"><i data-lucide="list"></i><span>الحجوزات</span></button>
+        <button type="button" class="mn-new" onclick="if(isGuest()){showToast('وضع المشاهدة فقط','error');return;}toggleGlobalBookingModal()"><i data-lucide="plus"></i><span>حجز جديد</span></button>
+        <button type="button" onclick="toggleNotificationsModal()"><i data-lucide="bell"></i><span>الإشعارات</span></button>
+        <button type="button" onclick="toggleStatsModal()"><i data-lucide="bar-chart-3"></i><span>الإحصائيات</span></button>
+    </nav>
+
     <!-- Details Modal -->
-    <div id="detailsModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center modal-backdrop p-4">
-        <div class="bg-white rounded-[2rem] w-full max-w-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-fade-in border border-slate-100">
+    <div id="detailsModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center modal-backdrop day-backdrop p-4">
+        <div class="day-panel bg-white rounded-[2rem] w-full max-w-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col border border-slate-100">
             <div class="px-6 py-5 bg-gradient-to-l from-[#6E1418] to-[#8a1c22] text-white flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/20">
@@ -138,13 +150,49 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <div id="detailsModalActions"></div>
-                    <button onclick="closeDetailsModal()" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 hover:rotate-90 transition-all duration-300">
+                    <button onclick="(window.closeDetailsModalAnimated || closeDetailsModal)()" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 hover:rotate-90 transition-all duration-300">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
             <div id="modalContent" class="p-6 overflow-y-auto flex-1 bg-slate-50/50">
                 <!-- Bookings Injected Here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Logs Modal (Admin) — سجل الدخول: جدول على الشاشات الكبيرة، كروت منفصلة على الموبايل -->
+    <div id="sessionLogsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4" style="z-index:60">
+        <div class="bg-white rounded-[2rem] w-full max-w-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-fade-in">
+            <div class="px-6 py-5 bg-slate-900 text-white flex justify-between items-center gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-[#A88A45]/20 rounded-xl flex items-center justify-center">
+                        <i data-lucide="history" class="w-5 h-5 text-[#A88A45]"></i>
+                    </div>
+                    <h3 class="font-black text-xl tracking-wide">سجل الدخول</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="loadSessionLogs()" class="text-xs font-bold text-white bg-white/10 hover:bg-white/20 rounded-lg px-3 py-2">تحديث</button>
+                    <button onclick="document.getElementById('sessionLogsModal').classList.add('hidden')" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 hover:rotate-90 transition-all duration-300">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-4 sm:p-6 overflow-y-auto">
+                <p class="text-xs text-slate-500 mb-3">آخر 200 اتصال. كل اتصال بيتسجّل لوحده، فانقطاع الشبكة ثم رجوعها بيظهر كسطر جديد.</p>
+                <div class="session-logs-table-wrap table-responsive rounded-xl border border-slate-200 bg-white">
+                    <style>
+                        #sessionLogsTable th, #sessionLogsTable td { padding: 0.5rem 0.45rem; font-size: 0.75rem; white-space: nowrap; }
+                        #sessionLogsTable td:first-child { white-space: normal; word-break: break-all; min-width: 7.5rem; }
+                    </style>
+                    <table id="sessionLogsTable" class="users-table mt-0">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr><th>المستخدم</th><th>التاريخ</th><th>من</th><th>إلى</th><th>المدة</th></tr>
+                        </thead>
+                        <tbody id="sessionLogsBody"></tbody>
+                    </table>
+                </div>
+                <div id="sessionLogsCards" class="space-y-3"></div>
             </div>
         </div>
     </div>
@@ -167,6 +215,32 @@
                 <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 flex items-start gap-3 text-blue-800">
                     <i data-lucide="info" class="w-5 h-5 mt-0.5 shrink-0"></i>
                     <p class="text-sm">قائمة بجميع المستخدمين المفعّلين بالنظام. كلمات المرور مشفّرة عند Firebase ولا تظهر لأحد. بصفتك مدير (Admin)، يمكنك إرسال رابط إعادة تعيين كلمة المرور أو إيقاف الحسابات.</p>
+                </div>
+
+                <!-- المتصلون الآن (أدمن فقط) -->
+                <div id="onlineNowSection" class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-6">
+                    <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                        <div class="flex items-center gap-2 text-emerald-800 font-black text-base">
+                            <span class="relative flex h-2.5 w-2.5">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                            </span>
+                            المتصلون الآن
+                        </div>
+                        <span id="onlineNowCount" class="text-xs font-bold text-emerald-700">—</span>
+                    </div>
+                    <div id="onlineNowList" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- سجل الدخول (أدمن فقط) — بيتفتح في شاشة منبثقة مستقلة -->
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6">
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div class="flex items-center gap-2 text-slate-700 font-black text-base">
+                            <i data-lucide="history" class="w-5 h-5 text-[#A88A45]"></i>
+                            سجل الدخول
+                        </div>
+                        <button onclick="openSessionLogsModal()" class="text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 rounded-lg px-3 py-1.5">عرض</button>
+                    </div>
                 </div>
 
                 <!-- Add New User Form - Admin Only -->
@@ -201,7 +275,7 @@
                     </button>
                 </div>
 
-                <div class="table-responsive rounded-xl border border-slate-200">
+                <div class="table-responsive users-table-wrap rounded-xl border border-slate-200">
                     <table class="users-table">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
@@ -213,7 +287,27 @@
                         <tbody id="usersTableBody"></tbody>
                     </table>
                 </div>
+                <!-- نفس المستخدمين كروت على الموبايل بدل الجدول -->
+                <div id="usersCards" class="space-y-3"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal (إحصائيات الحجوزات) -->
+    <div id="statsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+        <div class="bg-white rounded-[2rem] w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-fade-in">
+            <div class="px-6 py-5 bg-gradient-to-l from-[#6E1418] to-[#8a1c22] text-white flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 text-[#A88A45]"></i>
+                    </div>
+                    <h3 class="font-black text-xl tracking-wide">الإحصائيات</h3>
+                </div>
+                <button onclick="toggleStatsModal()" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 hover:rotate-90 transition-all duration-300">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="statsModalBody" class="overflow-y-auto flex-1 bg-slate-50 p-3 sm:p-5"></div>
         </div>
     </div>
 
@@ -227,12 +321,18 @@
                     </div>
                     <h3 class="font-black text-xl tracking-wide">قائمة الحجوزات القادمة</h3>
                 </div>
-                <button onclick="toggleBookingsListModal()" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 hover:rotate-90 transition-all duration-300">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="printUpcomingBookings()" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-all duration-300" title="طباعة الحجوزات القادمة">
+                        <i data-lucide="printer" class="w-5 h-5"></i>
+                    </button>
+                    <button onclick="toggleBookingsListModal()" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 hover:rotate-90 transition-all duration-300">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
             </div>
             <div class="p-0 overflow-y-auto flex-1 bg-white">
-                <div class="table-responsive">
+                <div id="allBookingsCards" class="md:hidden p-3 space-y-3 bg-slate-50"></div>
+                <div class="table-responsive hidden md:block">
                     <table class="users-table mt-0">
                         <thead class="bg-slate-50 border-b border-slate-200 shadow-sm sticky top-0 z-10">
                             <tr>
@@ -253,6 +353,39 @@
     </div>
 
     <!-- Notifications History Modal -->
+    <!-- المحادثات بين الموظفين (1 لـ 1) -->
+    <div id="chatModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+        <div class="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden flex flex-col animate-fade-in border border-slate-100" style="height: min(80vh, 600px);">
+            <div class="p-4 bg-white border-b border-slate-100 flex justify-between items-center shrink-0 gap-2">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button id="chatBackBtn" onclick="closeChatConversation()" class="hidden w-9 h-9 shrink-0 flex items-center justify-center bg-slate-50 rounded-full hover:bg-slate-200 transition-colors" title="رجوع">
+                        <i data-lucide="arrow-right" class="w-5 h-5 text-slate-500"></i>
+                    </button>
+                    <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-[#A88A45] border border-amber-100 shrink-0">
+                        <i data-lucide="message-circle" class="w-5 h-5"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 id="chatTitle" class="font-black text-lg text-slate-800 truncate">المحادثات</h3>
+                        <p id="chatSubtitle" class="text-xs text-slate-500 truncate"></p>
+                    </div>
+                </div>
+                <button onclick="toggleChatModal()" class="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-50 rounded-full hover:bg-slate-200 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+                </button>
+            </div>
+            <div id="chatListPane" class="flex-1 overflow-y-auto bg-slate-50/50"></div>
+            <div id="chatConvPane" class="hidden flex-1 flex flex-col min-h-0">
+                <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/50"></div>
+                <div class="p-3 bg-white border-t border-slate-100 flex items-end gap-2 shrink-0">
+                    <textarea id="chatInput" rows="1" maxlength="500" placeholder="اكتب رسالة..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage();}" class="flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 text-slate-800 px-3 py-2 text-sm outline-none focus:border-[#A88A45] max-h-28"></textarea>
+                    <button onclick="sendChatMessage()" class="w-11 h-11 shrink-0 rounded-xl text-white flex items-center justify-center hover:opacity-90 transition-opacity" style="background:#6E1418" title="إرسال">
+                        <i data-lucide="send" class="w-5 h-5" style="transform: scaleX(-1);"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="notificationsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
         <div class="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden max-h-[85vh] flex flex-col animate-fade-in border border-slate-100">
             <div class="p-5 bg-white border-b border-slate-100 flex justify-between items-center shrink-0">
@@ -273,6 +406,42 @@
                 <button onclick="clearNotifications()" class="text-sm text-red-500 hover:text-red-700 hover:bg-red-50 px-4 py-2 rounded-xl transition-colors font-bold w-full flex items-center justify-center gap-2">
                     <i data-lucide="trash-2" class="w-4 h-4"></i> مسح سجل الإشعارات
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edited Bookings Modal (سجل التعديلات) -->
+    <div id="editedBookingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+        <div class="bg-white rounded-[2rem] w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-fade-in">
+            <div class="px-6 py-5 bg-gradient-to-l from-[#6E1418] to-[#8a1c22] text-white flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
+                        <i data-lucide="history" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-xl tracking-wide">سجل التعديلات</h3>
+                        <p class="text-xs text-white/70 font-medium mt-0.5">كل تعديل على الحجوزات: كان إيه وبقى إيه ومين عدّل، من الأحدث للأقدم</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('editedBookingsModal').classList.add('hidden')" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 hover:rotate-90 transition-all duration-300">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 shrink-0 flex items-center gap-3">
+                <div class="relative flex-1">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+                    </div>
+                    <input id="editedBookingsSearchInput" type="text" oninput="filterEditedBookings()" placeholder="بحث في التعديلات (اسم العميل، القاعة، المستخدم...)"
+                        class="w-full pr-10 pl-4 py-2.5 border border-slate-200 rounded-xl bg-white text-sm outline-none focus:border-[#A88A45] focus:ring-2 focus:ring-[#A88A45]/20 transition-all font-medium">
+                </div>
+                <button onclick="loadEditedBookings()" class="p-2.5 text-slate-500 hover:text-[#A88A45] hover:bg-amber-50 rounded-xl transition-all shrink-0" title="تحديث">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                </button>
+                <div id="editedBookingsCountBadge" class="text-xs font-bold text-slate-400 whitespace-nowrap shrink-0 bg-slate-100 px-3 py-2 rounded-xl"></div>
+            </div>
+            <div class="flex-1 bg-slate-50" style="overflow-y: auto;">
+                <div id="editedBookingsList" class="p-3 space-y-3"></div>
             </div>
         </div>
     </div>
@@ -313,12 +482,13 @@
                 <div id="deletedBookingsCountBadge" class="text-xs font-bold text-slate-400 whitespace-nowrap shrink-0 bg-slate-100 px-3 py-2 rounded-xl"></div>
             </div>
             <!-- Table -->
-            <div class="flex-1" id="deletedBookingsTableWrapper" style="overflow-y: auto; overflow-x: scroll;">
-                <table class="users-table mt-0" style="min-width: 950px;">
+            <div class="flex-1" id="deletedBookingsTableWrapper" style="overflow-y: auto; overflow-x: auto;">
+                <div id="deletedBookingsCards" class="md:hidden p-3 space-y-3 bg-slate-50"></div>
+                <table class="users-table mt-0 hidden md:table" style="min-width: 950px;">
                         <thead class="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                             <tr>
                                 <th class="text-slate-500 py-3 w-10 text-center">
-                                    <input type="checkbox" id="deletedBookingsSelectAll" onchange="toggleSelectAllDeletedBookings(this)" class="w-4 h-4 rounded border-slate-300 accent-[#6E1418] cursor-pointer">
+                                    <input type="checkbox" id="deletedBookingsSelectAll" onchange="toggleSelectAllDeletedBookings(this)">
                                 </th>
                                 <th class="text-slate-500 py-3 w-10 text-center">#</th>
                                 <th class="text-[#6E1418] py-3">نوع الحذف</th>
@@ -412,6 +582,9 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
+                    <button id="archiveDetailPrintBtn" onclick="printArchivedMonth()" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-black flex items-center gap-1.5 transition-all" title="طباعة حجوزات الشهر">
+                        <i data-lucide="printer" class="w-4 h-4"></i> <span class="hidden sm:inline">طباعة</span>
+                    </button>
                     <button id="archiveDetailRestoreBtn" onclick="restoreArchivedMonth(document.getElementById('archiveDetailModal').dataset.monthKey)" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-black flex items-center gap-1.5 transition-all" title="استعادة إلى القائمة النشطة">
                         <i data-lucide="rotate-ccw" class="w-4 h-4"></i> <span class="hidden sm:inline">استعادة</span>
                     </button>
@@ -420,23 +593,79 @@
                     </button>
                 </div>
             </div>
-            <div class="overflow-y-auto flex-1">
-                <div class="table-responsive">
-                    <table class="users-table mt-0">
-                        <thead class="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                            <tr>
-                                <th class="text-slate-500 py-3 w-10 text-center">#</th>
-                                <th class="text-[#6E1418] py-3">اسم العميل</th>
-                                <th class="text-[#6E1418] py-3">الهاتف</th>
-                                <th class="text-[#6E1418] py-3">القاعة</th>
-                                <th class="text-[#6E1418] py-3">التاريخ</th>
-                                <th class="text-[#6E1418] py-3">الوقت</th>
-                                <th class="text-[#6E1418] py-3">ملاحظات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="archiveDetailTableBody"></tbody>
-                    </table>
+            <div class="overflow-y-auto overflow-x-hidden flex-1 bg-slate-50/50">
+                <div id="archiveDetailCards" class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photoshoot Modal (حجز فوتوشين — بدون قاعة) -->
+    <div id="photoshootModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center modal-backdrop p-4">
+        <div class="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden max-h-[95vh] flex flex-col animate-fade-in border border-slate-100">
+            <div class="px-6 py-5 bg-gradient-to-l from-[#6E1418] to-[#8a1c22] text-white flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner text-2xl"><i data-lucide="camera" class="w-6 h-6 text-[#A88A45]"></i></div>
+                    <div>
+                        <h3 class="font-black text-xl tracking-wide" id="photoshootTitle">حجز فوتوشين جديد</h3>
+                        <p class="text-sm text-[#A88A45] font-medium mt-0.5">تصوير داخل الفندق — بدون قاعة</p>
+                    </div>
                 </div>
+                <button type="button" onclick="closePhotoshootModal()" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 hover:rotate-90 transition-all duration-300">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50/50">
+                <form onsubmit="savePhotoshoot(event)" id="photoshootForm" class="space-y-4" autocomplete="off">
+                    <input type="hidden" name="psKind" value="floor">
+                    <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+                        <button type="button" id="psKindFloor" onclick="psSetKind('floor')" class="py-2.5 rounded-lg text-sm font-black transition-all bg-white text-[#6E1418] shadow">أرضية التصوير</button>
+                        <button type="button" id="psKindPrep" onclick="psSetKind('prep')" class="py-2.5 rounded-lg text-sm font-black transition-all text-slate-500">غرفة تجهيز</button>
+                    </div>
+                    <div class="input-group">
+                        <label class="required">الاسم</label>
+                        <input type="text" name="psName" required maxlength="80" placeholder="اسم العميل">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="input-group hidden" id="psRoomWrap">
+                            <label>رقم الغرفة</label>
+                            <input type="text" name="psRoom" maxlength="20" placeholder="اختياري">
+                        </div>
+                        <div class="input-group" id="psPhoneWrap">
+                            <label>الهاتف</label>
+                            <input type="tel" name="psPhone" maxlength="20" placeholder="01xxxxxxxxx" dir="ltr" style="text-align:right">
+                        </div>
+                        <div class="input-group">
+                            <label class="required">التاريخ</label>
+                            <input type="date" name="psDate" required>
+                        </div>
+                    </div>
+                    <div id="psFloorOnly" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="input-group">
+                            <label>السعر (جنيه)</label>
+                            <input type="number" name="psPrice" min="0" step="any" inputmode="decimal" oninput="psRecalc()" placeholder="0">
+                        </div>
+                        <div class="input-group">
+                            <label>المبلغ المدفوع (جنيه)</label>
+                            <input type="number" name="psPaid" min="0" step="any" inputmode="decimal" oninput="psRecalc()" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-500">
+                        <span>المتبقي</span><span id="psRemaining" class="font-black text-emerald-700">0 جنيه</span>
+                    </div>
+                    <div class="input-group">
+                        <label>لينك المرفقات</label>
+                        <input type="url" name="psLink" placeholder="https://..." dir="ltr" style="text-align:right">
+                    </div>
+                    </div>
+                    <div class="input-group">
+                        <label>ملاحظات</label>
+                        <textarea name="psNotes" rows="2" maxlength="500" placeholder="اختياري"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-[#6E1418] hover:bg-[#5a1013] text-white font-black py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-[#A88A45]"></i><span>حفظ الحجز</span>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -454,9 +683,14 @@
                         <p class="text-sm text-[#A88A45] font-medium mt-0.5">أدخل تفاصيل الحجز بدقة</p>
                     </div>
                 </div>
+                <div class="flex items-center gap-2">
+                <button type="button" id="psSwitchBtn" onclick="switchToPhotoshoot()" class="hidden px-3 h-10 flex items-center gap-1.5 bg-white/10 rounded-full hover:bg-white/20 text-xs font-black transition-all" title="حجز فوتوشين (بدون قاعة)">
+                    <i data-lucide="camera" class="w-4 h-4"></i><span>فوتوشين</span>
+                </button>
                 <button onclick="toggleGlobalBookingModal()" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 hover:rotate-90 transition-all duration-300">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
+                </div>
             </div>
             <div class="p-6 md:p-8 overflow-y-auto flex-1 bg-slate-50/50">
                 <form onsubmit="handleGlobalBookingSubmit(event)" id="globalBookingForm" class="space-y-6">
@@ -555,11 +789,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div class="input-group">
                                 <label class="required">عدد الأفراد</label>
-                                <input type="number" id="weddingGuests" min="0" step="1" value="0" oninput="recalcWeddingTotals()">
+                                <input type="number" id="weddingGuests" min="0" step="1" oninput="recalcWeddingTotals()">
                             </div>
                             <div class="input-group">
                                 <label>سعر الفرد (جنيه)</label>
-                                <input type="number" id="weddingPricePerPerson" min="0" step="any" value="0" oninput="recalcWeddingTotals()">
+                                <input type="number" id="weddingPricePerPerson" min="0" step="any" oninput="recalcWeddingTotals()">
                             </div>
                         </div>
 
@@ -599,6 +833,18 @@
                                 <i data-lucide="plus" class="w-3.5 h-3.5"></i> إضافة تجهيز آخر
                             </button>
                             <div id="otherEquipmentTotal" class="hidden text-xs font-bold text-[#6E1418] bg-amber-50/60 rounded-lg px-3 py-2 border border-amber-100"></div>
+                        </div>
+
+                        <div id="otherPaymentsSection" class="hidden pt-4 mt-1 border-t border-slate-100 space-y-3">
+                            <div class="flex items-center gap-2 text-[#6E1418] font-bold">
+                                <i data-lucide="wallet" class="w-5 h-5"></i> المقدمات المدفوعة
+                                <span class="text-[10px] text-slate-400 font-normal">(تُخصم من الإجمالي)</span>
+                            </div>
+                            <div id="otherPaymentsContainer" class="space-y-2"></div>
+                            <button type="button" onclick="addOtherPaymentRow()" class="inline-flex items-center gap-1.5 text-xs font-bold text-[#6E1418] hover:text-white hover:bg-[#6E1418] bg-[#6E1418]/5 px-3 py-1.5 rounded-lg transition-colors border border-[#6E1418]/10">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> إضافة مقدم حجز
+                            </button>
+                            <div id="otherPaymentsTotalsBox" class="bg-amber-50/60 rounded-xl p-4 space-y-1.5 text-sm border border-amber-100"></div>
                         </div>
                     </div>
 
@@ -713,14 +959,14 @@
                     <i data-lucide="shield-alert" class="w-6 h-6 text-yellow-300"></i>
                 </div>
                 <div>
-                    <h3 class="font-black text-xl tracking-wide">⚠️ تحذير: استعادة نسخة احتياطية</h3>
+                    <h3 class="font-black text-xl tracking-wide">تحذير: استعادة نسخة احتياطية</h3>
                     <p class="text-sm text-white/70 font-medium mt-0.5">هذا الإجراء لا يمكن التراجع عنه</p>
                 </div>
             </div>
             <div class="p-6">
                 <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-5 mb-6">
                     <p class="text-red-800 font-black text-base text-center leading-relaxed">
-                        🚨 هذا سيحذف <span class="underline">كل البيانات الحالية</span> ويستبدلها بالنسخة الاحتياطية
+                        هذا سيحذف <span class="underline">كل البيانات الحالية</span> ويستبدلها بالنسخة الاحتياطية
                     </p>
                     <p class="text-red-600 font-bold text-sm text-center mt-3">
                         سيتم حذف جميع الحجوزات والسجلات الحالية نهائياً من Firebase
@@ -742,7 +988,7 @@
     </div>
 
     <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed bottom-6 right-6 left-6 z-[9999] flex flex-col gap-3 pointer-events-none md:max-w-sm md:right-auto md:left-8">
+    <div id="toast-container" class="fixed bottom-3 right-3 left-3 z-[9999] flex flex-col gap-1.5 pointer-events-none md:bottom-4 md:gap-2 md:max-w-xs md:right-auto md:left-6">
         <!-- Toasts injected here -->
     </div>
 
@@ -806,7 +1052,7 @@
         <span id="sync-text" class="text-sm font-bold tracking-wide">جاري المزامنة مع السحابة...</span>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20261113c"></script>
 
     <!-- Hidden file input for backup restore -->
     <input type="file" id="backupFileInput" accept=".json" class="hidden" onchange="handleBackupFileSelected(event)">

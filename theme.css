@@ -1,0 +1,55 @@
+/* theme.css — يُحمَّل بعد styles.css. تصميم بصري فقط: لا يغيّر أي منطق في app.js. */
+:root { --bg-body:#f4f6f9; --soft:0 4px 20px -2px rgba(0,0,0,.05); --float:0 10px 25px -5px rgba(110,20,24,.35); }
+body, input, select, textarea, button { font-family:'Tajawal','Noto Sans Arabic',sans-serif; }
+*, ::before, ::after { letter-spacing:normal !important; }
+.font-black { font-weight:800 !important; }
+.calendar-header-row > div { text-transform:none; font-weight:700; font-size:.75rem; }
+.calendar-header-row > div:last-child { color:var(--brand-red); }
+
+/* ===== الهيدر ===== */
+header.glass-panel { background:#fff; border:0 !important; border-radius:0 0 1.5rem 1.5rem; box-shadow:var(--soft) !important; backdrop-filter:none; -webkit-backdrop-filter:none; }
+header button[title] { min-width:40px; height:40px; padding:0 !important; display:inline-flex !important; align-items:center; justify-content:center; border-radius:1rem !important; background:#f8fafc; color:#475569; }
+header button[title]:hover { background:#f1f5f9; }
+header .bg-slate-100.rounded-xl { border-radius:1rem; background:#f8fafc; }
+
+/* ===== بطاقة التقويم ===== */
+#app main > div.bg-white { border:1px solid #f1f5f9 !important; border-radius:1.5rem !important; box-shadow:var(--soft) !important; }
+#app main > .flex > div, #app main > .flex > button { border-radius:1rem !important; border-color:#f1f5f9 !important; box-shadow:var(--soft) !important; }
+.calendar-grid { background:transparent !important; box-shadow:none !important; border:0 !important; padding:0; gap:6px; }
+.day-cell { border-radius:1rem; border:1px solid transparent; background:#fff; box-shadow:none; transition:transform .2s cubic-bezier(.4,0,.2,1), background .2s, border-color .2s; }
+.day-cell:hover { background:#f8fafc; border-color:#e2e8f0; box-shadow:none; }
+.day-cell:active { transform:scale(.96); }
+html:not(.dark) .day-cell[class*="heat-"]:not(.today-active):not(.drag-over) { background:#f8fafc; border-color:#e2e8f0; }
+.day-cell.today-active { background:#fffbf0; border:1.5px solid var(--brand-gold); box-shadow:none; }
+/* اليوم المحدد: خلية عنابية بأسماء الحجوزات ظاهرة بنفس ألوانها */
+.day-cell.selected-day, html.dark .day-cell.selected-day { background:var(--brand-red) !important; border-color:var(--brand-red); box-shadow:0 4px 10px rgba(110,20,24,.25); transform:scale(1.03); z-index:10; }
+.day-cell.selected-day > div:first-child > span:first-child { background:rgba(255,255,255,.18); color:#fff; }
+.day-cell.selected-day > div:first-child > span:nth-child(2) { background:rgba(255,255,255,.2); color:#fff; }
+.booking-tag { border-radius:.5rem; }
+
+/* ===== قائمة اليوم (موبايل) كبطاقات ===== */
+.agenda-item { border-radius:1rem !important; padding:.8rem 1rem !important; border:1px solid #f1f5f9 !important; box-shadow:var(--soft) !important; }
+.day-agenda { border-top-color:#f1f5f9; }
+
+/* ===== مودالات: أوراق سفلية على الموبايل ===== */
+@media (max-width:639px) {
+  .modal-backdrop { align-items:flex-end !important; padding:0 !important; }
+  .modal-backdrop > div { max-width:100% !important; width:100%; border-radius:1.5rem 1.5rem 0 0 !important; max-height:92vh !important; animation:slideUp .28s ease-out both; }
+}
+
+/* ===== شريط التنقل السفلي (موبايل) ===== */
+#mobileNav { display:none; }
+@media (max-width:767px) {
+  #app:not([style*="none"]) ~ #mobileNav { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:45; align-items:center; justify-content:space-between; padding:10px 20px calc(10px + env(safe-area-inset-bottom,0px)); background:rgba(255,255,255,.97); border-top:1px solid #f1f5f9; direction:rtl; }
+  #mobileNav button { display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:0; color:#94a3b8; font-size:10px; font-weight:700; cursor:pointer; }
+  #mobileNav button svg { width:22px; height:22px; }
+  #mobileNav button.active { color:var(--brand-red); }
+  #mobileNav .mn-new { flex-direction:row; gap:8px; margin-top:-30px; padding:14px 20px; border-radius:1rem; background:var(--brand-red); color:#fff; font-size:14px; box-shadow:var(--float); }
+  #mobileNav .mn-new:active { transform:scale(.95); }
+  #app main { padding-bottom:110px !important; }
+  #sync-status { bottom:96px; }
+}
+html.dark #mobileNav { background:rgba(19,28,49,.97); border-top-color:var(--d-border-soft); }
+html.dark header.glass-panel { background:#131c31; }
+html.dark header button[title], html.dark header .bg-slate-100.rounded-xl { background:var(--d-surface-2); color:#cbd5e1; }
+html.dark .day-cell { background:var(--d-surface); }
