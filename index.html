@@ -242,6 +242,25 @@
 
   .day-header { min-width: 110px; }
 
+  /* نسخ يوم موظف */
+
+  .cd-targets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0.9rem; }
+  .cd-opt {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 10px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; background: #fff;
+  }
+  .cd-opt input { width: 17px; height: 17px; accent-color: var(--accent); flex-shrink: 0; }
+  .cd-opt.disabled { opacity: 0.45; cursor: not-allowed; background: var(--surface2); }
+  .cd-opt small { color: var(--text-muted); font-weight: 400; font-size: 11px; display: block; }
+  .cd-row { margin-bottom: 0.9rem; }
+  .cd-row label.cd-lbl { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+  .cd-row input[type=date] {
+    width: 100%; padding: 9px 14px; border: 1.5px solid var(--border); border-radius: var(--radius);
+    font-family: 'Cairo', sans-serif; font-size: 14px; color: var(--text);
+  }
+  .cd-preview { font-size: 12.5px; color: var(--text-muted); background: var(--surface); border-radius: 10px; padding: 8px 10px; margin-bottom: 0.4rem; }
+
   .day-date {
     display: block;
     font-size: 11px;
@@ -1128,7 +1147,32 @@
         <span>🗑️</span> مسح
       </button>
       &nbsp;
+      <button class="btn btn-soft" onclick="copyFromCell()">📋 نسخ اليوم</button>
+      &nbsp;
       <button class="btn btn-outline" style="color:#374151;border-color:#cbd5e1;" onclick="closeModal()">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- Copy Day Modal -->
+<div class="modal-overlay" id="copyDayOverlay" onclick="closeCopyDayOutside(event)">
+  <div class="modal">
+    <div class="modal-title">📋 نسخ يوم الموظف</div>
+    <div class="modal-sub" id="copyDaySub"></div>
+    <div class="cd-targets" id="copyDayTargets"></div>
+    <div class="cd-row">
+      <label class="cd-lbl" for="copyDayExtra">أو تاريخ آخر (أي أسبوع)</label>
+      <input type="date" id="copyDayExtra" onchange="updateCopyDayPreview()">
+    </div>
+    <label class="cd-opt" style="margin-bottom:0.8rem;">
+      <input type="checkbox" id="copyDayOverwrite" checked onchange="updateCopyDayPreview()">
+      <span>استبدال الأيام المسجلة<small>لو مش متعلّمة: بيملأ الأيام الفاضية بس</small></span>
+    </label>
+    <div class="cd-preview" id="copyDayPreview"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="performCopyDay()">نسخ</button>
+      &nbsp;
+      <button class="btn btn-outline" style="color:#374151;border-color:#cbd5e1;" onclick="closeCopyDay()">إلغاء</button>
     </div>
   </div>
 </div>
@@ -1331,6 +1375,89 @@
     render();
     autoSave();
     showToast(`تم نسخ ${copied} خلية من الأسبوع السابق ✓`, 'success');
+  }
+
+  // ── نسخ يوم موظف واحد إلى أيام تانية (له هو بس) ──
+  let copyDaySource = null; // { empId, dateStr }
+  function dayNameOf(dateStr) {
+    const [y,m,d] = dateStr.split('-').map(Number);
+    return DAYS_AR[(new Date(y, m-1, d).getDay() + 1) % 7];
+  }
+  function dispDate(dateStr) { const [y,m,d] = dateStr.split('-'); return `${+d}/${+m}/${y}`; }
+
+  // من نافذة الخلية: نقفلها ونفتح نافذة النسخ لنفس الموظف واليوم
+  function copyFromCell() {
+    if (!activeCell) return;
+    const { empId, dateStr } = activeCell;
+    if (!schedule[schedKey(empId, dateStr)]) { showToast('اليوم ده فاضي — حدد وردية أو إجازة الأول', 'error'); return; }
+    closeModal();
+    openCopyDay(empId, dateStr);
+  }
+
+  function openCopyDay(empId, dateStr) {
+    const emp = employees.find(e => e.id === empId);
+    if (!emp) return;
+    copyDaySource = { empId, dateStr };
+    const info = SHIFT_LABELS[schedule[schedKey(empId, dateStr)]] || SHIFT_LABELS.empty;
+    document.getElementById('copyDaySub').innerHTML =
+      `نسخ <strong>${info.icon} ${info.label}</strong> للموظف <strong>${emp.name}</strong> من يوم <strong>${dayNameOf(dateStr)} ${dispDate(dateStr)}</strong> إلى:`;
+    const days = getWeekDates(currentWeekOffset);
+    document.getElementById('copyDayTargets').innerHTML = days.map((d,i) => {
+      const ds = fmtDate(d), isSrc = ds === dateStr;
+      return `<label class="cd-opt ${isSrc?'disabled':''}">
+        <input type="checkbox" value="${ds}" ${isSrc?'disabled':'checked'} onchange="updateCopyDayPreview()">
+        <span>${DAYS_AR[i]}<small>${fmtDisplay(d)}${isSrc?' (اليوم المصدر)':''}</small></span>
+      </label>`;
+    }).join('');
+    document.getElementById('copyDayExtra').value = '';
+    document.getElementById('copyDayOverwrite').checked = true;
+    updateCopyDayPreview();
+    document.getElementById('copyDayOverlay').classList.add('open');
+  }
+
+  function closeCopyDay() {
+    document.getElementById('copyDayOverlay').classList.remove('open');
+    copyDaySource = null;
+  }
+  function closeCopyDayOutside(e) {
+    if (e.target === document.getElementById('copyDayOverlay')) closeCopyDay();
+  }
+
+  function getCopyDayTargets() {
+    if (!copyDaySource) return [];
+    const t = [...document.querySelectorAll('#copyDayTargets input:checked')].map(i => i.value);
+    const extra = document.getElementById('copyDayExtra').value;
+    if (extra && extra !== copyDaySource.dateStr && !t.includes(extra)) t.push(extra);
+    return t;
+  }
+
+  function updateCopyDayPreview() {
+    const targets = getCopyDayTargets();
+    const el = document.getElementById('copyDayPreview');
+    el.textContent = targets.length
+      ? `سيتم النسخ إلى ${targets.length} ${targets.length > 2 ? 'أيام' : 'يوم'}`
+      : 'اختر يوم أو أكتر للنسخ إليه';
+  }
+
+  function performCopyDay() {
+    if (!copyDaySource) return;
+    const { empId, dateStr } = copyDaySource;
+    const v = schedule[schedKey(empId, dateStr)];
+    if (!v) { showToast('اليوم المصدر فاضي', 'error'); return; }
+    const targets = getCopyDayTargets();
+    if (!targets.length) { showToast('اختر يوم للنسخ إليه', 'error'); return; }
+    const overwrite = document.getElementById('copyDayOverwrite').checked;
+    let changed = 0;
+    targets.forEach(ds => {
+      const k = schedKey(empId, ds);
+      if (!overwrite && schedule[k]) return;
+      if (schedule[k] !== v) { schedule[k] = v; changed++; }
+    });
+    closeCopyDay();
+    if (!changed) { showToast('مفيش تغيير — الأيام المختارة مطابقة أو مسجلة بالفعل', 'info'); return; }
+    render();
+    autoSave();
+    showToast(`تم النسخ إلى ${changed} ${changed > 2 ? 'أيام' : 'يوم'} ✓`, 'success');
   }
 
   // ── Employees / log panel (mobile) ─────────────────────
@@ -1673,6 +1800,7 @@
       // تجاهل التحديث الوارد أثناء حفظ جارٍ، أو نافذة تحديد وردية/سجل مفتوحة (حتى لا تُغلق أثناء الاستخدام)
       if (busy || activeCell) return;
       if (document.getElementById('logModalOverlay').classList.contains('open')) return;
+      if (document.getElementById('copyDayOverlay').classList.contains('open')) return;
       const data = snap.exists ? snap.data() : {};
       employees = data.employees || [];
       schedule  = data.schedule  || {};
