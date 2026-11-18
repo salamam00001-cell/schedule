@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="جدول العمل الأسبوعي">
 <meta name="format-detection" content="telephone=no">
-<meta name="app-version" content="2.0.1">
+<meta name="app-version" content="2.0.2">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <title>جدول العمل الأسبوعي</title>
@@ -842,7 +842,7 @@
     main { padding: 0.75rem; padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)); }
     header {
       padding: 6px 0.75rem;
-      padding-top: calc(6px + env(safe-area-inset-top));
+      padding-top: calc(6px + min(env(safe-area-inset-top), 8px));
       height: auto;
       min-height: 44px;
       flex-wrap: nowrap;
@@ -1103,7 +1103,7 @@
   <div class="status-bar" id="statusBar">
     <div class="spinner" id="spinner"></div>
     <span id="statusText">جاهز — أضف موظفين وابدأ الجدولة</span>
-    <span id="appVersion" style="margin-right:auto;opacity:.6;font-size:11px;direction:ltr;">v2.0.1</span>
+    <span id="appVersion" style="margin-right:auto;opacity:.6;font-size:11px;direction:ltr;">v2.0.2</span>
   </div>
 
   <!-- Add Employee -->
