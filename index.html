@@ -7,6 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="جدول العمل الأسبوعي">
 <meta name="format-detection" content="telephone=no">
+<meta name="app-version" content="2.0.0">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <title>جدول العمل الأسبوعي</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -708,6 +711,37 @@
   .toast.info { background: #0284c7; }
 
   /* ── Print Styles ───────────────────────────────────── */
+  /* ── وضع الفرشاة ── */
+  .paint-bar {
+    background: rgba(255,255,255,0.95);
+    border-radius: 12px;
+    padding: 6px;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 3px;
+  }
+  .paint-bar .btn { padding: 4px 10px; font-size: 12px; min-height: 0; width: auto; }
+  .paint-bar.on {
+    position: sticky;
+    top: calc(68px + env(safe-area-inset-top) + 8px);
+    z-index: 95;
+  }
+  .paint-head { display: contents; }
+  .paint-chips { display: none; }
+  .paint-bar.on .paint-chips { display: contents; }
+  .paint-chip.day-cell {
+    min-height: 0; margin: 0; padding: 3px 4px;
+    flex-direction: row; gap: 1px; flex-shrink: 0; white-space: nowrap;
+    border-width: 1px; border-radius: 6px;
+    font-size: 9.5px; font-weight: 700; font-family: inherit;
+  }
+  .paint-chip.day-cell:hover { transform: none; }
+  .paint-chip.active { outline: 2px solid var(--primary); outline-offset: 1px; }
+  body.paint-on .schedule-table { user-select: none; -webkit-user-select: none; }
+  body.paint-on .schedule-table td[data-date] .day-cell,
+  body.paint-on .schedule-table td[data-date] { touch-action: pan-y; }
+  body.paint-on .schedule-table td.name-cell { cursor: pointer; }
+
   @media print {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
@@ -717,7 +751,7 @@
     }
 
     header, .status-bar, .config-panel, .add-employee-section,
-    .week-nav .btn, .legend, .modal-overlay {
+    .week-nav .btn, .legend, .paint-bar, .modal-overlay {
       display: none !important;
     }
 
@@ -820,7 +854,7 @@
 
     /* Scrollable icon-only action bar so nothing wraps or gets cut off */
     .header-actions {
-      gap: 14px;
+      gap: 9px;
       flex-wrap: nowrap;
       justify-content: center;
       width: 100%;
@@ -1032,6 +1066,14 @@
     <span>جدول العمل الأسبوعي</span>
   </div>
   <div class="header-actions">
+    <button class="btn btn-outline" id="undoBtn" onclick="undo()" title="تراجع (Ctrl+Z)" disabled>
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+      تراجع
+    </button>
+    <button class="btn btn-outline" id="redoBtn" onclick="redo()" title="إعادة (Ctrl+Y)" disabled>
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/></svg>
+      إعادة
+    </button>
     <button class="btn btn-outline tools-btn" onclick="toggleTools()" title="الموظفين والسجل">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
       الموظفين
@@ -1060,6 +1102,7 @@
   <div class="status-bar" id="statusBar">
     <div class="spinner" id="spinner"></div>
     <span id="statusText">جاهز — أضف موظفين وابدأ الجدولة</span>
+    <span id="appVersion" style="margin-right:auto;opacity:.6;font-size:11px;direction:ltr;">v2.0.0</span>
   </div>
 
   <!-- Add Employee -->
@@ -1110,6 +1153,14 @@
     <button class="btn btn-soft" onclick="copyPrevWeek()">
       📑 نسخ جدول الأسبوع السابق
     </button>
+  </div>
+
+  <!-- Paint Mode -->
+  <div class="paint-bar" id="paintBar">
+    <div class="paint-head">
+      <button class="btn btn-soft" id="paintToggle" onclick="togglePaint()" title="اختر نوع الوردية ثم اضغط أو اسحب على خلايا الموظف. اضغط اسم الموظف لتعبئة أسبوعه.">🖌️ تشغيل الفرشاة</button>
+    </div>
+    <div class="paint-chips" id="paintChips"></div>
   </div>
 
   <!-- Print Header (only visible when printing) -->
@@ -1325,7 +1376,7 @@
         const k  = schedKey(emp.id, ds);
         const sh = schedule[k] || 'empty';
         const info = SHIFT_LABELS[sh] || SHIFT_LABELS.empty;
-        return `<td onclick="openModal('${emp.id}','${ds}')">
+        return `<td data-emp="${emp.id}" data-date="${ds}" onclick="openModal('${emp.id}','${ds}')">
           <div class="day-cell ${info.cls}">
             <span class="cell-day">${DAYS_AR[i]}</span>
             <span class="cell-icon">${info.icon}</span>
@@ -1336,7 +1387,7 @@
       }).join('');
 
       return `<tr>
-        <td class="name-cell">${emp.name}
+        <td class="name-cell" data-emp="${emp.id}">${emp.name}
           ${emp.dept?`<br><span style="font-size:11px;color:#94a3b8;font-weight:400">${emp.dept}</span>`:''}
         </td>
         ${cells}
@@ -1464,8 +1515,17 @@
   function toggleTools() {
     const el = document.getElementById('toolsPanel');
     if (el.classList.contains('open')) { closeTools(); return; }
-    el.style.top = document.querySelector('header').getBoundingClientRect().bottom + 'px';
     el.classList.add('open');
+    positionTools();
+  }
+  // لوحة الموظفين تبدأ تحت الهيدر، وتحت شريط الفرشاة لو وضع الفرشاة شغّال
+  function positionTools() {
+    const el = document.getElementById('toolsPanel');
+    let top = document.querySelector('header').getBoundingClientRect().bottom;
+    if (typeof paintMode !== 'undefined' && paintMode) {
+      top = Math.max(top, document.getElementById('paintBar').getBoundingClientRect().bottom + 4);
+    }
+    el.style.top = top + 'px';
   }
   function closeTools() { document.getElementById('toolsPanel').classList.remove('open'); }
 
@@ -1774,13 +1834,134 @@
   // نستخدم مستند واحد ('schedule/main') يحتوي على employees و schedule
   // مع مزامنة لحظية (onSnapshot) بدل الاستعلام الدوري.
 
+  // ── التراجع / الإعادة (حتى 20 خطوة) ──────────────────
+  const MAX_HISTORY = 20;
+  let undoStack = [];   // لقطات سابقة (JSON)
+  let redoStack = [];
+  let lastSnap  = null; // آخر حالة معروفة (محمّلة أو محفوظة)
+
+  function takeSnap() { return JSON.stringify({ employees, schedule }); }
+
+  // يُستدعى قبل كل حفظ: لو الحالة اتغيرت عن آخر لقطة نخزّن اللقطة القديمة للتراجع
+  function recordHistory() {
+    const cur = takeSnap();
+    if (lastSnap !== null && cur !== lastSnap) {
+      undoStack.push(lastSnap);
+      if (undoStack.length > MAX_HISTORY) undoStack.shift();
+      redoStack = [];
+    }
+    lastSnap = cur;
+    updateUndoButtons();
+  }
+
+  function updateUndoButtons() {
+    const u = document.getElementById('undoBtn'), r = document.getElementById('redoBtn');
+    if (u) { u.disabled = !undoStack.length; u.title = `تراجع (Ctrl+Z) — ${undoStack.length}/${MAX_HISTORY}`; }
+    if (r) { r.disabled = !redoStack.length; r.title = `إعادة (Ctrl+Y) — ${redoStack.length}`; }
+  }
+
+  function applySnap(str) {
+    const s = JSON.parse(str);
+    employees = s.employees || [];
+    schedule  = s.schedule  || {};
+    lastSnap  = takeSnap();
+    render();
+    autoSave();
+    updateUndoButtons();
+  }
+
+  function flushPendingPaint() {
+    clearTimeout(paintSaveTimer);
+    recordHistory();
+  }
+
+  function undo() {
+    flushPendingPaint();
+    if (!undoStack.length) { showToast('لا يوجد ما يمكن التراجع عنه', 'info'); return; }
+    redoStack.push(takeSnap());
+    if (redoStack.length > MAX_HISTORY) redoStack.shift();
+    applySnap(undoStack.pop());
+    showToast('تم التراجع ↩️', 'success');
+  }
+
+  function redo() {
+    flushPendingPaint();
+    if (!redoStack.length) { showToast('لا يوجد ما يمكن إعادته', 'info'); return; }
+    undoStack.push(takeSnap());
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    applySnap(redoStack.pop());
+    showToast('تمت الإعادة ↪️', 'success');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const t = e.target, tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+    else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
+  });
+
+  // ── التخزين: مستند لكل أسبوع ─────────────────────────
+  // schedule/main            ← الموظفين فقط
+  // schedule/week_YYYY-MM-DD ← ورديات أسبوع واحد (يبدأ من السبت) في الحقل cells
+  // بكده مفيش حد 1MB على كل التاريخ، والحفظ بيبعت الخلايا اللي اتغيّرت بس.
+  const colRef = db.collection('schedule');
+  let serverCells = {};   // آخر محتوى معروف على السيرفر: { weekId: { key: shift } }
+  let serverEmpJson = null;
+  let needsMigration = false;
+
+  function weekIdOf(dateStr) {
+    const [y,m,d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    dt.setDate(dt.getDate() - (dt.getDay()+1) % 7);
+    return fmtDate(dt);
+  }
+
+  function groupByWeek(sched) {
+    const g = {};
+    Object.keys(sched).forEach(k => {
+      const w = weekIdOf(k.slice(-10));
+      (g[w] = g[w] || {})[k] = sched[k];
+    });
+    return g;
+  }
+
   // حفظ تلقائي إلى Firebase — يُستدعى بعد كل تعديل (إضافة/حذف موظف، تحديد وردية...)
   let busy = false;
   async function autoSave() {
+    if (needsMigration) {
+      showToast('البيانات القديمة محتاجة ترحيل — افتح migrate.html أولاً', 'error');
+      return;
+    }
+    recordHistory();
     busy = true;
     setStatus('جاري الحفظ التلقائي إلى Firebase...', true);
     try {
-      await scheduleDocRef.set({ employees, schedule });
+      const ops = [];
+      const empJson = JSON.stringify(employees);
+      if (empJson !== serverEmpJson) {
+        ops.push(b => b.set(colRef.doc('main'), { employees, migrated: true }, { merge: true }));
+      }
+      const groups = groupByWeek(schedule);
+      const weekIds = new Set([...Object.keys(groups), ...Object.keys(serverCells)]);
+      const newServer = {};
+      weekIds.forEach(w => {
+        const cur = groups[w] || {}, old = serverCells[w] || {};
+        const patch = {};
+        let changed = false;
+        Object.keys(cur).forEach(k => { if (old[k] !== cur[k]) { patch[k] = cur[k]; changed = true; } });
+        Object.keys(old).forEach(k => { if (!(k in cur)) { patch[k] = firebase.firestore.FieldValue.delete(); changed = true; } });
+        if (Object.keys(cur).length) newServer[w] = { ...cur };
+        if (changed) ops.push(b => b.set(colRef.doc('week_' + w), { cells: patch }, { merge: true }));
+      });
+      for (let i = 0; i < ops.length; i += 400) {
+        const batch = db.batch();
+        ops.slice(i, i + 400).forEach(f => f(batch));
+        await batch.commit();
+      }
+      serverCells = newServer;
+      serverEmpJson = empJson;
       setConnected(true);
       setStatus(`تم الحفظ تلقائياً ✓ — ${new Date().toLocaleTimeString('ar-EG')}`);
     } catch(err) {
@@ -1792,18 +1973,41 @@
     busy = false;
   }
 
-  // اشتراك لحظي في مستند الجدول — يُستدعى مرة واحدة عند فتح التطبيق
-  // ويستقبل أي تحديث من مستخدمين/متصفحات أخرى فوراً بدون الحاجة لاستعلام دوري
+  // اشتراك لحظي في مجموعة schedule — بيقرأ مستندات الأسابيع مرة واحدة عند الفتح،
+  // وبعدها بيستقبل المستندات اللي اتغيّرت بس من أي مستخدم/متصفح آخر
   function subscribeToSchedule() {
     setStatus('جاري تحميل البيانات من Firebase...', true);
-    scheduleDocRef.onSnapshot(snap => {
+    colRef.onSnapshot(snap => {
       // تجاهل التحديث الوارد أثناء حفظ جارٍ، أو نافذة تحديد وردية/سجل مفتوحة (حتى لا تُغلق أثناء الاستخدام)
       if (busy || activeCell) return;
       if (document.getElementById('logModalOverlay').classList.contains('open')) return;
       if (document.getElementById('copyDayOverlay').classList.contains('open')) return;
-      const data = snap.exists ? snap.data() : {};
-      employees = data.employees || [];
-      schedule  = data.schedule  || {};
+      let main = {};
+      const sch = {}, wc = {};
+      snap.forEach(d => {
+        if (d.id === 'main') main = d.data() || {};
+        else if (d.id.startsWith('week_')) {
+          const cells = (d.data() || {}).cells || {};
+          wc[d.id.slice(5)] = cells;
+          Object.assign(sch, cells);
+        }
+      });
+      employees = main.employees || [];
+      // بيانات قديمة (مستند واحد) لسه ما اتعملهاش ترحيل: نعرضها بس ونمنع الحفظ
+      if (!main.migrated && main.schedule && Object.keys(main.schedule).length) {
+        needsMigration = true;
+        schedule = main.schedule;
+        setConnected(true);
+        setStatus('⚠️ البيانات محتاجة ترحيل — افتح migrate.html مرة واحدة');
+        showToast('البيانات القديمة محتاجة ترحيل (migrate.html)', 'error');
+        render();
+        return;
+      }
+      needsMigration = false;
+      schedule = sch;
+      serverCells = wc;
+      serverEmpJson = JSON.stringify(employees);
+      lastSnap  = takeSnap();
       setConnected(true);
       setStatus(`متصل ✓ — آخر تحديث: ${new Date().toLocaleTimeString('ar-EG')}`);
       render();
@@ -2020,6 +2224,143 @@
     win.document.close();
     showToast('افتح "حفظ كـ PDF" في نافذة الطباعة ✓', 'info');
   }
+
+  // ── وضع الفرشاة (إدخال سريع) ──────────────────────────
+  let paintMode = false;
+  let brush = null;      // نوع الوردية المختار (أو 'empty' للمسح)
+  let painting = null;   // { empId, last } أثناء السحب
+  let paintSaveTimer;
+
+  function buildPaintChips() {
+    const order = ['morning','evening','night','weekly-off','annual-leave','sick-leave','official-holiday','unpaid-leave','absent','empty'];
+    document.getElementById('paintChips').innerHTML = order.map(t => {
+      const i = SHIFT_LABELS[t];
+      const label = t === 'empty' ? '🧽 مسح' : `${i.icon} ${i.label}`;
+      return `<button type="button" class="day-cell ${i.cls} paint-chip" data-shift="${t}" onclick="selectBrush('${t}')">${label}</button>`;
+    }).join('');
+  }
+
+  function togglePaint() {
+    paintMode = !paintMode;
+    document.body.classList.toggle('paint-on', paintMode);
+    document.getElementById('paintBar').classList.toggle('on', paintMode);
+    const btn = document.getElementById('paintToggle');
+    btn.textContent = paintMode ? '✅ إيقاف الفرشاة' : '🖌️ تشغيل الفرشاة';
+    btn.className = paintMode ? 'btn btn-success' : 'btn btn-soft';
+    if (!paintMode) { brush = null; document.querySelectorAll('.paint-chip').forEach(c => c.classList.remove('active')); }
+    if (document.getElementById('toolsPanel').classList.contains('open')) positionTools();
+  }
+
+  function selectBrush(type) {
+    brush = type;
+    document.querySelectorAll('.paint-chip').forEach(c => c.classList.toggle('active', c.dataset.shift === type));
+  }
+
+  // تعيين الوردية لخلية واحدة (تحديث الخلية فقط بدون إعادة رسم الجدول)
+  function paintCell(empId, ds) {
+    const k = schedKey(empId, ds);
+    if (brush === 'empty') delete schedule[k]; else schedule[k] = brush;
+    const td = document.querySelector(`#tableBody td[data-emp="${empId}"][data-date="${ds}"]`);
+    const emp = employees.find(e => e.id === empId);
+    if (!td || !emp) return;
+    const info = SHIFT_LABELS[brush] || SHIFT_LABELS.empty;
+    td.innerHTML = `<div class="day-cell ${info.cls}">
+        <span class="cell-day">${DAYS_AR[td.cellIndex - 1]}</span>
+        <span class="cell-icon">${info.icon}</span>
+        ${info.label ? `<span class="cell-label">${info.label}</span>` : ''}
+        <span class="cell-name">${emp.name}</span>
+      </div>`;
+  }
+
+  function queuePaintSave() {
+    busy = true; // لمنع تحديث Firebase الوارد من الكتابة فوق التعديلات قبل حفظها
+    clearTimeout(paintSaveTimer);
+    paintSaveTimer = setTimeout(autoSave, 500);
+  }
+
+  function paintRange(fromTd, toTd) {
+    const row = toTd.parentElement;
+    const a = Math.min(fromTd.cellIndex, toTd.cellIndex);
+    const b = Math.max(fromTd.cellIndex, toTd.cellIndex);
+    for (let i = a; i <= b; i++) {
+      const c = row.cells[i];
+      if (c && c.dataset.date) paintCell(c.dataset.emp, c.dataset.date);
+    }
+  }
+
+  (function initPaint() {
+    buildPaintChips();
+    const tb = document.getElementById('tableBody');
+
+    // منع فتح نافذة الاختيار أثناء وضع الفرشاة + تعبئة أسبوع الموظف عند الضغط على اسمه
+    tb.addEventListener('click', e => {
+      if (!paintMode) return;
+      e.stopPropagation();
+      e.preventDefault();
+      const nameTd = e.target.closest('td.name-cell');
+      if (!nameTd) return;
+      if (!brush) { showToast('اختر نوع الوردية من الشريط أولاً', 'info'); return; }
+      getWeekDates(currentWeekOffset).forEach(d => paintCell(nameTd.dataset.emp, fmtDate(d)));
+      queuePaintSave();
+    }, true);
+
+    tb.addEventListener('pointerdown', e => {
+      if (!paintMode || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      const td = e.target.closest('td[data-date]');
+      if (!td) return;
+      if (!brush) { showToast('اختر نوع الوردية من الشريط أولاً', 'info'); return; }
+      busy = true;
+      const touch = e.pointerType !== 'mouse';
+      painting = { empId: td.dataset.emp, last: td, start: td, touch, drawn: !touch };
+      if (!touch) paintCell(td.dataset.emp, td.dataset.date);
+    });
+
+    document.addEventListener('pointermove', e => {
+      if (!painting) return;
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const td = el && el.closest('td[data-date]');
+      // السحب مقصور على نفس صف الموظف
+      if (!td || td === painting.last || td.dataset.emp !== painting.empId) return;
+      paintRange(painting.last, td);
+      painting.last = td;
+      painting.drawn = true;
+    });
+
+    // اللمس: ضغطة بدون سحب ترسم الخلية عند الرفع. التمرير الرأسي يلغي الـ pointer فلا يرسم شيئاً.
+    document.addEventListener('pointerup', () => {
+      if (!painting) return;
+      if (!painting.drawn) paintCell(painting.start.dataset.emp, painting.start.dataset.date);
+      painting = null; queuePaintSave();
+    });
+    document.addEventListener('pointercancel', () => {
+      if (!painting) return;
+      const hadDraw = painting.drawn;
+      painting = null;
+      if (hadDraw) queuePaintSave(); else { busy = false; }
+    });
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && paintMode) togglePaint(); });
+  })();
+
+  // ── فحص التحديث: لو فيه إصدار أحدث على السيرفر يعيد تحميل الصفحة تلقائياً ──
+  (function checkForUpdate() {
+    const CUR = document.querySelector('meta[name="app-version"]').content;
+    async function check() {
+      if (busy || activeCell || paintMode) return;   // ما نقاطعش المستخدم وهو بيعدّل
+      try {
+        const r = await fetch(location.pathname + '?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) return;
+        const m = (await r.text()).match(/<meta name="app-version" content="([^"]+)"/);
+        if (!m || m[1] === CUR) return;
+        const p = new URLSearchParams(location.search);
+        if (p.get('v') === m[1]) return;              // منع التكرار لو الكاش لسه قديم
+        p.set('v', m[1]);
+        location.replace(location.pathname + '?' + p.toString());
+      } catch (e) { /* بدون إنترنت أو من ملف محلي: نتجاهل */ }
+    }
+    check();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+  })();
 
   // ── Init ──────────────────────────────────────────────
   render();
