@@ -980,7 +980,8 @@
   /* ── Mobile: whole app fits in ONE screen (no page scroll, no horizontal scroll) ── */
   @media (max-width: 768px) {
     html, body { height: 100%; overflow: hidden; }
-    body { display: flex; flex-direction: column; min-height: 0; }
+    /* safe-area السفلي كان بيتحسب مرتين (body + main) فيسيب فراغ تحت الجدول — نحسبه مرة واحدة في main بس */
+    body { display: flex; flex-direction: column; min-height: 0; padding-bottom: 0; height: 100dvh; }
     header { flex-shrink: 0; }
     main {
       flex: 1; min-height: 0; width: 100%;
