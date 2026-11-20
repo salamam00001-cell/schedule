@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="جدول العمل الأسبوعي">
 <meta name="format-detection" content="telephone=no">
-<meta name="app-version" content="2.0.3">
+<meta name="app-version" content="2.0.4">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <title>جدول العمل الأسبوعي</title>
@@ -1105,7 +1105,7 @@
   <div class="status-bar" id="statusBar">
     <div class="spinner" id="spinner"></div>
     <span id="statusText">جاهز — أضف موظفين وابدأ الجدولة</span>
-    <span id="appVersion" style="margin-right:auto;opacity:.6;font-size:11px;direction:ltr;">v2.0.3</span>
+    <span id="appVersion" style="margin-right:auto;opacity:.6;font-size:11px;direction:ltr;">v2.0.4</span>
   </div>
 
   <!-- Add Employee -->
@@ -2065,7 +2065,16 @@
 
     const tableClone = document.getElementById('scheduleTable').cloneNode(true);
     tableClone.style.cssText = 'border-collapse:collapse;width:100%;min-width:0;';
-    tableClone.querySelectorAll('td,th').forEach(el => { el.style.transition = 'none'; });
+    // إلغاء الـ sticky في النسخة المصدّرة: html2canvas بيحسب موضعه غلط وبينزّل صف الأيام لتحت
+    tableClone.querySelectorAll('thead, tbody, tr, td, th').forEach(el => {
+      el.style.transition = 'none';
+      el.style.position = 'static';
+      el.style.top = 'auto';
+      el.style.right = 'auto';
+      el.style.left = 'auto';
+      el.style.bottom = 'auto';
+      el.style.transform = 'none';
+    });
     // على الموبايل: الصورة بنفس عرض وشكل الجدول الظاهر على الشاشة
     if (window.matchMedia('(max-width: 768px)').matches) {
       const liveW = document.getElementById('scheduleTable').offsetWidth;
