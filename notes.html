@@ -267,13 +267,29 @@ const noteTxt=n=>{
   }else o+=n.body||'';
   return o.replace(/\s+$/,'')+'\n\n— '+(n.folder?n.folder+' | ':'')+d(n.updated||Date.now());
 };
-function saveTxt(text,name,quiet){
+const mkFile=(text,name)=>new File(['\ufeff'+text],name,{type:'text/plain'});
+function dlOne(text,name){
   const blob=new Blob(['\ufeff'+text],{type:'text/plain;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download=name;a.style.display='none';
   document.body.appendChild(a);a.click();
   setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},4000);
-  if(!quiet)toast('Saved: '+name);
+}
+/* items: [{text,name}] — لازم تتنادي مباشرة من ضغطة المستخدم */
+async function saveFiles(items){
+  try{
+    if(navigator.canShare&&navigator.share){
+      const files=items.map(i=>mkFile(i.text,i.name));
+      if(navigator.canShare({files})){
+        await navigator.share({files,title:'Notes'});
+        return toast('Choose "Save to device / Files" in the share menu');
+      }
+    }
+  }catch(e){
+    if(e&&e.name==='AbortError')return;
+  }
+  items.forEach((i,k)=>setTimeout(()=>dlOne(i.text,i.name),k*500));
+  toast('Saving '+items.length+' file(s) to Downloads...');
 }
 const safeName=t=>(t||'note').replace(/[\\/:*?"<>|\n\r]+/g,' ').trim().slice(0,40)||'note';
 const acts={
@@ -313,17 +329,11 @@ const acts={
   expall:()=>{
     const l=notes.filter(n=>!n.deleted&&!n.purged);
     if(!l.length)return toast('No notes to export');
-    if(!confirm('Save '+l.length+' separate TXT files to your phone?'))return;
+    if(!confirm('Export '+l.length+' notes as separate TXT files?'))return;
     const used={};
-    l.forEach((n,k)=>{
-      let nm=safeName(title(n));
-      used[nm]=(used[nm]||0)+1;
-      if(used[nm]>1)nm+=' ('+used[nm]+')';
-      setTimeout(()=>saveTxt(noteTxt(n),nm+'.txt',true),k*500);
-    });
-    toast('Saving '+l.length+' files...');
+    saveFiles(l.map(n=>{let nm=safeName(title(n));used[nm]=(used[nm]||0)+1;if(used[nm]>1)nm+=' ('+used[nm]+')';return{text:noteTxt(n),name:nm+'.txt'}}));
   },
-  expone:()=>{saveTxt(noteTxt(cur),safeName(title(cur))+'.txt')},
+  expone:()=>{saveFiles([{text:noteTxt(cur),name:safeName(title(cur))+'.txt'}])},
   imp:()=>$('file').click(),
   sync:()=>initSync(),
   signout:()=>signOut(),
