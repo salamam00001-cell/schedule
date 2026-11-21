@@ -254,6 +254,28 @@ $('dlg').onclick=e=>{
   if(b){$('dlg').hidden=true;acts[b.dataset.a](b.dataset.v)}
   else if(e.target===$('dlg'))$('dlg').hidden=true;
 };
+
+/* ===== تصدير TXT ===== */
+const pad=x=>String(x).padStart(2,'0');
+const stamp=()=>{const d=new Date();return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'-'+pad(d.getHours())+pad(d.getMinutes())};
+const noteTxt=n=>{
+  const d=t=>{const x=new Date(t);return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate())+' '+pad(x.getHours())+':'+pad(x.getMinutes())};
+  let o='';
+  if(n.type==='list'){
+    if(n.title)o+=n.title+'\n\n';
+    o+=(n.items||[]).filter(i=>i.t.trim()).map(i=>(i.d?'[x] ':'[ ] ')+i.t).join('\n');
+  }else o+=n.body||'';
+  return o.replace(/\s+$/,'')+'\n\n— '+(n.folder?n.folder+' | ':'')+d(n.updated||Date.now());
+};
+function saveTxt(text,name,quiet){
+  const blob=new Blob(['\ufeff'+text],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=name;a.style.display='none';
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},4000);
+  if(!quiet)toast('Saved: '+name);
+}
+const safeName=t=>(t||'note').replace(/[\\/:*?"<>|\n\r]+/g,' ').trim().slice(0,40)||'note';
 const acts={
   delf:()=>{
     const l=notes.filter(n=>n.folder===ff);
@@ -273,7 +295,7 @@ const acts={
   sort:v=>{sort=v;render()},
   fc:v=>{cf=+v;render()},
   setc:v=>{cur.c=+v;paintEd()},
-  menu:()=>dlg(mi('vArch','Archive ('+notes.filter(n=>n.archived&&!n.deleted).length+')')+mi('vTrash','Trash ('+notes.filter(n=>n.deleted&&!n.purged).length+')')+(db?mi('signout','Sign out'):mi('sync','Sign in & sync'))+mi('exp','Export backup')+mi('imp','Import backup')+mi('about','About')),
+  menu:()=>dlg(mi('vArch','Archive ('+notes.filter(n=>n.archived&&!n.deleted).length+')')+mi('vTrash','Trash ('+notes.filter(n=>n.deleted&&!n.purged).length+')')+(db?mi('signout','Sign out'):mi('sync','Sign in & sync'))+mi('expall','Export each note as TXT')+mi('exp','Export backup')+mi('imp','Import backup')+mi('about','About')),
   noop:()=>{},
   rArch:id=>rowSet(id,{archived:true},'Moved to archive'),
   rUnarch:id=>rowSet(id,{archived:false},'Restored from archive'),
@@ -288,6 +310,20 @@ const acts={
   restore:()=>save({deleted:false,deletedAt:null},'Restored'),
   purge:()=>{if(!confirm('Delete this note forever?'))return;save({deleted:true,purged:true,body:'',items:[],title:''},'Deleted forever')},
   exp:()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(notes)],{type:'application/json'}));a.download='notes-backup.json';a.click()},
+  expall:()=>{
+    const l=notes.filter(n=>!n.deleted&&!n.purged);
+    if(!l.length)return toast('No notes to export');
+    if(!confirm('Save '+l.length+' separate TXT files to your phone?'))return;
+    const used={};
+    l.forEach((n,k)=>{
+      let nm=safeName(title(n));
+      used[nm]=(used[nm]||0)+1;
+      if(used[nm]>1)nm+=' ('+used[nm]+')';
+      setTimeout(()=>saveTxt(noteTxt(n),nm+'.txt',true),k*500);
+    });
+    toast('Saving '+l.length+' files...');
+  },
+  expone:()=>{saveTxt(noteTxt(cur),safeName(title(cur))+'.txt')},
   imp:()=>$('file').click(),
   sync:()=>initSync(),
   signout:()=>signOut(),
@@ -359,7 +395,7 @@ $('ec').onclick=e=>{
   else if(t.id==='add'){cur.items.push({t:'',d:false});paintEd();const a=$('ec').querySelectorAll('input[type=text]');a[a.length-1].focus()}
 };
 $('ep').onclick=()=>{mode=mode==='edit'?'view':'edit';paintEd()};
-$('em').onclick=()=>dlg(cur.deleted?mi('restore','Restore')+mi('purge','Delete forever'):mi('pin',cur.pinned?'Unpin':'Pin to top')+mi('color','Color')+mi('icon','Icon')+mi('fold','Folder')+mi('type',cur.type==='list'?'Convert to text note':'Convert to checklist')+mi('rem','Reminder')+(cur.archived?mi('unarch','Restore from archive'):mi('archive','Archive'))+mi('del','Move to trash'));
+$('em').onclick=()=>dlg(cur.deleted?mi('restore','Restore')+mi('purge','Delete forever'):mi('pin',cur.pinned?'Unpin':'Pin to top')+mi('color','Color')+mi('icon','Icon')+mi('fold','Folder')+mi('type',cur.type==='list'?'Convert to text note':'Convert to checklist')+mi('rem','Reminder')+mi('expone','Export as TXT')+(cur.archived?mi('unarch','Restore from archive'):mi('archive','Archive'))+mi('del','Move to trash'));
 function save(p,msg){
   cur.items=cur.items.filter(i=>i.t.trim());
   Object.assign(cur,p);delete cur._new;
@@ -434,7 +470,9 @@ $('file').onchange=async e=>{
 
 /* ===== مزامنة Firebase: users/{uid}/notes/{id} — الأحدث يكسب، والحذف بعلامة deleted ===== */
 let db=null,uid=null,auth=null,unsub=null;
-const load=s=>new Promise((ok,no)=>{const x=document.createElement('script');x.src=s;x.onload=ok;x.onerror=no;document.head.appendChild(x)});
+const tmo=(p,ms,msg)=>Promise.race([p,new Promise((_,no)=>setTimeout(()=>no({code:'timeout',message:msg||'timeout'}),ms))]);
+const load1=s=>new Promise((ok,no)=>{const x=document.createElement('script');x.src=s;x.onload=ok;x.onerror=()=>no({code:'load-failed'});document.head.appendChild(x)});
+const load=s=>tmo(load1(s),12000,'script timeout').catch(()=>tmo(load1(s.replace('https://www.gstatic.com/firebasejs/10.12.2/','https://cdn.jsdelivr.net/npm/firebase@10.12.2/')),12000,'script timeout'));
 /* تسجيل الدخول بالإيميل والباسورد (حسابات تنشئها أنت من Firebase Console > Authentication > Users)
    الجلسة بتتحفظ تلقائياً في المتصفح/الـ WebView، فمش هتحتاج تدخل البيانات كل مرة. */
 async function ensureAuth(){
@@ -444,14 +482,17 @@ async function ensureAuth(){
   if(!firebase.auth)await load(b+'auth-compat.js');
   if(!firebase.firestore)await load(b+'firestore-compat.js');
   if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
-  return auth=firebase.auth();
+  const a=firebase.auth();
+  const P=firebase.auth.Auth.Persistence;
+  for(const m of [P.LOCAL,P.SESSION,P.NONE]){try{await tmo(a.setPersistence(m),4000);break}catch(e){}}
+  return auth=a;
 }
 async function initSync(){
   if(!FIREBASE_CONFIG)return toast('Add FIREBASE_CONFIG in the script first');
   if(db)return toast('Sync already on');
   try{
     await ensureAuth();
-    const u=await new Promise(r=>{const o=auth.onAuthStateChanged(x=>{o();r(x)})});
+    const u=await tmo(new Promise(r=>{const o=auth.onAuthStateChanged(x=>{o();r(x)})}),8000,'auth state timeout');
     if(u)startSync(u,true);else loginDlg();
   }catch(err){
     let was=null;try{was=localStorage.getItem('notes_sync')}catch(e){}
@@ -478,13 +519,13 @@ function loginDlg(msg){
   gerr(msg);
   $('gate').hidden=false;
 }
-const netErr=err=>err.code==='auth/network-request-failed'||!err.code?'Connection problem, check the internet and try again':null;
+const netErr=err=>err.code==='auth/network-request-failed'||err.code==='timeout'||err.code==='load-failed'||!err.code?'Connection problem, check the internet and try again':null;
 async function doLogin(){
   const em=$('gem').value.trim(),pw=$('gpw').value;
   if(!em||!pw)return gerr('Enter email and password');
   try{
     await ensureAuth();
-    const c=await auth.signInWithEmailAndPassword(em,pw);
+    const c=await tmo(auth.signInWithEmailAndPassword(em,pw),20000);
     try{localStorage.setItem('notes_email',em)}catch(e){}
     startSync(c.user);
   }catch(err){
@@ -499,7 +540,7 @@ async function doSignup(){
   if(pw!==pw2)return gerr('Passwords do not match');
   try{
     await ensureAuth();
-    const c=await auth.createUserWithEmailAndPassword(em,pw);
+    const c=await tmo(auth.createUserWithEmailAndPassword(em,pw),20000);
     try{localStorage.setItem('notes_email',em)}catch(e){}
     startSync(c.user);
   }catch(err){
@@ -523,6 +564,7 @@ $('gate').addEventListener('keydown',e=>{if(e.key==='Enter')$('ggo').click()});
 function startSync(user,quiet){
   $('gate').hidden=true;$('gpw').value='';$('gpw2').value='';
   uid=user.uid;db=firebase.firestore();
+  if(!window._fsset){window._fsset=1;try{db.settings({experimentalForceLongPolling:true,useFetchStreams:false,merge:true})}catch(e){}}
   try{localStorage.setItem('notes_sync','1')}catch(e){}
   let first=true;
   unsub=db.collection('users').doc(uid).collection('notes').onSnapshot(s=>{
