@@ -276,7 +276,9 @@ function dlOne(text,name){
   setTimeout(()=>{a.remove();URL.revokeObjectURL(a.href)},4000);
 }
 /* items: [{text,name}] — لازم تتنادي مباشرة من ضغطة المستخدم */
+let _pend=null;
 async function saveFiles(items){
+  let why='share not supported';
   try{
     if(navigator.canShare&&navigator.share){
       const files=items.map(i=>mkFile(i.text,i.name));
@@ -287,12 +289,22 @@ async function saveFiles(items){
     }
   }catch(e){
     if(e&&e.name==='AbortError')return;
+    why=(e&&e.name)||'share failed';
   }
   items.forEach((i,k)=>setTimeout(()=>dlOne(i.text,i.name),k*500));
-  toast('Saving '+items.length+' file(s) to Downloads...');
+  _pend=items;
+  setTimeout(()=>dlg('<div style="padding:18px 20px;line-height:1.6;border-bottom:1px solid #3a3a3a">Trying to save '+items.length+' file(s) to Downloads.<br><span style="color:#aaa;font-size:14px">If nothing was saved (some in-app browsers block downloads), use one of these:</span><br><span style="color:#777;font-size:12px">('+why+')</span></div>'+mi('fbCopy','Copy text')+(navigator.share?mi('fbShare','Share as text'):'')+mi('fbOpen','Show text to select &amp; copy')+mi('noop','Close')),1200);
+}
+const _pt=()=>(_pend||[]).map(i=>(_pend.length>1?'=== '+i.name.replace(/\.txt$/,'')+' ===\n':'')+i.text).join('\n\n\n');
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);return true}catch(e){}
+  try{const x=document.createElement('textarea');x.value=t;x.style.cssText='position:fixed;opacity:0';document.body.appendChild(x);x.select();const ok=document.execCommand('copy');x.remove();return ok}catch(e){return false}
 }
 const safeName=t=>(t||'note').replace(/[\\/:*?"<>|\n\r]+/g,' ').trim().slice(0,40)||'note';
 const acts={
+  fbCopy:async()=>{toast(await copyText(_pt())?'Copied to clipboard':'Copy failed, use "Show text"')},
+  fbShare:async()=>{try{await navigator.share({title:(_pend[0]||{}).name||'Notes',text:_pt()})}catch(e){}},
+  fbOpen:()=>{const t=_pt();dlg('<div style="padding:12px"><textarea id="fbt" readonly dir="auto" style="width:100%;height:55vh;background:#111;color:#fff;border:1px solid #444;font:inherit;font-size:16px;padding:8px"></textarea></div>'+mi('noop','Close'));$('fbt').value=t;$('fbt').focus();$('fbt').select()},
   delf:()=>{
     const l=notes.filter(n=>n.folder===ff);
     if(!confirm('Delete folder "'+ff+'"? Its '+l.length+' note(s) will go back to All notes.'))return;
