@@ -277,23 +277,14 @@ function dlOne(text,name){
 }
 /* items: [{text,name}] — لازم تتنادي مباشرة من ضغطة المستخدم */
 let _pend=null;
+const isWV=/; wv\)|WebView/i.test(navigator.userAgent)||(/Android/.test(navigator.userAgent)&&!/Chrome\//.test(navigator.userAgent));
 async function saveFiles(items){
-  let why='share not supported';
-  try{
-    if(navigator.canShare&&navigator.share){
-      const files=items.map(i=>mkFile(i.text,i.name));
-      if(navigator.canShare({files})){
-        await navigator.share({files,title:'Notes'});
-        return toast('Choose "Save to device / Files" in the share menu');
-      }
-    }
-  }catch(e){
-    if(e&&e.name==='AbortError')return;
-    why=(e&&e.name)||'share failed';
+  items.forEach((i,k)=>setTimeout(()=>dlOne(i.text,i.name),k*600));
+  toast(items.length>1?'Saving '+items.length+' files to Downloads...':'Saved to Downloads: '+items[0].name);
+  if(isWV){
+    _pend=items;
+    setTimeout(()=>dlg('<div style="padding:18px 20px;line-height:1.6;border-bottom:1px solid #3a3a3a">This app may block file downloads.<br><span style="color:#aaa;font-size:14px">If nothing was saved, use one of these:</span></div>'+mi('fbCopy','Copy text')+(navigator.share?mi('fbShare','Share as text'):'')+mi('fbOpen','Show text to select &amp; copy')+mi('noop','Close')),1500);
   }
-  items.forEach((i,k)=>setTimeout(()=>dlOne(i.text,i.name),k*500));
-  _pend=items;
-  setTimeout(()=>dlg('<div style="padding:18px 20px;line-height:1.6;border-bottom:1px solid #3a3a3a">Trying to save '+items.length+' file(s) to Downloads.<br><span style="color:#aaa;font-size:14px">If nothing was saved (some in-app browsers block downloads), use one of these:</span><br><span style="color:#777;font-size:12px">('+why+')</span></div>'+mi('fbCopy','Copy text')+(navigator.share?mi('fbShare','Share as text'):'')+mi('fbOpen','Show text to select &amp; copy')+mi('noop','Close')),1200);
 }
 const _pt=()=>(_pend||[]).map(i=>(_pend.length>1?'=== '+i.name.replace(/\.txt$/,'')+' ===\n':'')+i.text).join('\n\n\n');
 async function copyText(t){
